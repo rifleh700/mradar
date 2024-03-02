@@ -11,8 +11,6 @@
 	<script src="mradar_dict_client.lua" type="client" cache="false"/>
 	<script src="mradar_main_client.lua" type="client" cache="false"/>
 
-	<script src="mradar_test_client.lua" type="client" cache="false"/>
-
 	<file src="transform.fx"/>
 	<file src="radar.fx"/>
 
