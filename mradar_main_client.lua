@@ -731,6 +731,10 @@ function getMRadarVisible()
 end
 
 function setMRadarVisible(visible)
+	if type(visible) ~= "boolean" then error("bad argument #1 'visible' to 'setMRadarVisible' (boolean expected)", 1) end
 
-	drawData.visible = visible and true or false
+	if drawData.visible == visible then return false end
+	drawData.visible = visible
+
+	return true
 end
