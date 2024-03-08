@@ -15,7 +15,7 @@ local MAP_TILES_SIZE_HALF = MAP_TILES_SIZE / 2
 local MAP_TILE_WORLD_SIZE = MAP_WORLD_SIZE / MAP_TILES_SIZE
 local MAP_TILE_COLOR = tocolor(255, 255, 255, 255)
 local MAP_TILE_SEA_COLOR = tocolor(104, 136, 168, 255)
-local MAP_TILE_BLANK_COLOR = tocolor(204, 204, 204, 255)                            -- for interiors
+local MAP_TILE_BLANK_COLOR = tocolor(0, 0, 0, 0)                            -- for interiors
 local MAP_TILE_TEXTURES_PATH = TEXTURE_PATH .. "radar/"
 
 -- Here are GTA:IV sizes
@@ -73,11 +73,13 @@ local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
 local drawData = {}
 
+drawData.visible = true
+
 drawData.mapTileTextures = {}                    -- Radar.cpp: std::array<std::array<int32, MAX_RADAR_WIDTH_TILES>, MAX_RADAR_HEIGHT_TILES>& gRadarTextures
 drawData.hudSpriteTextures = {}                  -- Hud.h: CSprite2d (&Sprites)[6]
 drawData.radarSpriteTextures = {}                -- Radar.h: std::array<CSprite2d, MAX_RADAR_SPRITES>& RadarBlipSprites
 drawData.radarSpriteBlipTraceTextures = {}       -- custom textures (instead of drawing polygons)
-drawData.radarMaskTexture = {}
+drawData.radarMaskTexture = nil
 
 drawData.areRenderTargetsReady = false
 drawData.radarMaskShader = dxCreateShader("radar.fx")
@@ -660,6 +662,8 @@ end
 -- Hud.cpp: CHud::DrawRadar() // 0x58A330
 function draw()
 
+	if not drawData.visible then return true end
+
 	drawData.playerElement = getPedOccupiedVehicle(localPlayer) or localPlayer
 	drawData.playerElementMatrix = getElementMatrix(drawData.playerElement)
 
@@ -716,3 +720,21 @@ addEventHandler("onClientResourceStop", resourceRoot,
 		setPlayerHudComponentVisible("radar", true)
 	end
 )
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+function getMRadarVisible()
+
+	return drawData.visible
+end
+
+function setMRadarVisible(visible)
+	if type(visible) ~= "boolean" then error("bad argument #1 'visible' to 'setMRadarVisible' (boolean expected)", 1) end
+
+	if drawData.visible == visible then return false end
+	drawData.visible = visible
+
+	return true
+end
