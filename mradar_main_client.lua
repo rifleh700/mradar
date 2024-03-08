@@ -700,10 +700,7 @@ end
 init()
 
 addEventHandler("onClientRestore", root,
-	function(didClearRenderTargets)
-		if not didClearRenderTargets then
-			return
-		end
+	function()
 		drawData.areRenderTargetsReady = false
 	end
 )
