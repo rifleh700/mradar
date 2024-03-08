@@ -2,7 +2,7 @@
 
 	<info
 		author="matran/rifleh"
-		version="1.0.0"
+		version="1.1.0"
 		name="mradar"
 		description="Reengineered default GTA:SA radar"
 		type="script"
@@ -10,6 +10,9 @@
 
 	<script src="mradar_dict_client.lua" type="client" cache="false"/>
 	<script src="mradar_main_client.lua" type="client" cache="false"/>
+
+	<export function="getMRadarVisible" type="client"/>
+	<export function="setMRadarVisible" type="client"/>
 
 	<file src="transform.fx"/>
 	<file src="radar.fx"/>
