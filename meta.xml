@@ -2,11 +2,13 @@
 
 	<info
 		author="matran/rifleh"
-		version="1.1.1"
+		version="2.0.0"
 		name="mradar"
 		description="Reengineered default GTA:SA radar"
 		type="script"
 	/>
+
+	<script src="transform2.lua" type="shared" cache="false"/>
 
 	<script src="mradar_dict_client.lua" type="client" cache="false"/>
 	<script src="mradar_main_client.lua" type="client" cache="false"/>
@@ -17,9 +19,12 @@
 	<file src="transform.fx"/>
 	<file src="radar.fx"/>
 
+	<file src="font/sabankgothic.ttf"/>
+
 	<file src="txd/hud/radardisc.png"/>
 	<file src="txd/hud/radarRingPlane.png"/>
 	<file src="txd/hud/radardisc_mask.png"/>
+	<file src="txd/hud/arrow.png"/>
 
 	<file src="txd/trace/radar_trace_low.png"/>
 	<file src="txd/trace/radar_trace_high.png"/>

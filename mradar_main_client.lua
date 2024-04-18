@@ -1,12 +1,19 @@
 local camera = getCamera()
 
-local MATH_PI = math.pi
-local MATH_TWO_PI = math.pi * 2
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
 
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize()
 local TEXTURE_QUALITY_FORMAT = "dxt3"
 local TEXTURE_FILE_FORMAT = ".png"
+local TEXTURE_MIPMAPS = false
+local TEXTURE_EDGE = "clamp"
 local TEXTURE_PATH = "txd/"
+local FONT_PATH = "font/"
+local FONT_QUALITY = "antialiased"
 
 local MAP_WORLD_SIZE = 6000
 local MAP_WORLD_SIZE_HALF = MAP_WORLD_SIZE / 2
@@ -14,17 +21,17 @@ local MAP_TILES_SIZE = 12;
 local MAP_TILES_SIZE_HALF = MAP_TILES_SIZE / 2
 local MAP_TILE_WORLD_SIZE = MAP_WORLD_SIZE / MAP_TILES_SIZE
 local MAP_TILE_COLOR = tocolor(255, 255, 255, 255)
-local MAP_TILE_SEA_COLOR = tocolor(104, 136, 168, 255)
-local MAP_TILE_BLANK_COLOR = tocolor(0, 0, 0, 0)                            -- for interiors
+local MAP_TILE_INTERIOR_COLOR = tocolor(0, 0, 0, 0)
 local MAP_TILE_TEXTURES_PATH = TEXTURE_PATH .. "radar/"
 
 -- Here are GTA:IV sizes
-local RADAR_SIZE = SCREEN_HEIGHT / 5
+local RADAR_SIZE = (math.min(SCREEN_WIDTH, SCREEN_HEIGHT)) / 5                -- WideScreenFix: 0.1875
 local RADAR_SIZE_HALF = RADAR_SIZE / 2
-local RADAR_BOTTOM_OFFSET = SCREEN_HEIGHT / 20
+local RADAR_BOTTOM_OFFSET = RADAR_SIZE / 4
 local RADAR_LEFT_OFFSET = RADAR_BOTTOM_OFFSET * (11 / 6)
 local RADAR_SCREEN_X = RADAR_LEFT_OFFSET
 local RADAR_SCREEN_Y = SCREEN_HEIGHT - RADAR_BOTTOM_OFFSET - RADAR_SIZE
+-- TODO: drawing circle on RT instead of using texture? (bugged dxDrawCircle)
 local RADAR_BORDER_WIDTH = RADAR_SIZE_HALF / 8                                -- depends on radar disc texture
 local RADAR_BORDER_MARGIN = RADAR_BORDER_WIDTH / 8                            -- depends on radar disc texture
 local RADAR_BORDER_COLOR = tocolor(0, 0, 0, 255)
@@ -53,27 +60,60 @@ local ALTIMETER_SCREEN_X = ALTIMETER_BG_SCREEN_X + (ALTIMETER_BG_WIDTH / 2) - (A
 local ALTIMETER_WORLD_HEIGHT_MAX = 950
 local ALTIMETER_WORLD_HEIGHT_LOW = 200
 
-local RADAR_BLIP_SIZE = RADAR_SIZE / 8
+local RADAR_BLIP_SIZE = RADAR_SIZE * 0.15
 local RADAR_BLIP_SIZE_GTASA_DEFAULT = 2
 local RADAR_BLIP_ALPHA_MULTIPLIER = 1
-local RADAR_BLIP_VECTOR_MAX_LENGTH = 1 - (RADAR_BORDER_WIDTH / 2 / RADAR_SIZE_HALF)
-local RADAR_BLIP_SHOW_OTHER_INTERIOR = false
+local RADAR_BLIP_VECTOR_MAX_LENGTH = RADAR_SIZE_HALF - (RADAR_BORDER_WIDTH / 2)
 local RADAR_BLIP_TRACE_TEXTURES_PATH = TEXTURE_PATH .. "trace/"
-local RADAR_BLIP_NORTH_COLOR = tocolor(255, 255, 255, 255)
-local RADAR_BLIP_NORTH_SIZE_MULTIPLIER = 1
-local RADAR_BLIP_CENTRE_COLOR = tocolor(255, 255, 255, 255)
-local RADAR_BLIP_CENTRE_SIZE_MULTIPLIER = 1
-local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.6
+local RADAR_BLIP_CENTRE_SIZE_MULTIPLIER = 0.9
+local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.5
 local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
+-- F11 map
+local BIGMAP_CURSOR_ENABLED = true
+local BIGMAP_HIDE_CHAT = true
+local BIGMAP_SIZE = math.max(SCREEN_WIDTH, SCREEN_HEIGHT)
+local BIGMAP_ZOOM_SCALE_MAX = 4
+local BIGMAP_ZOOM_SCALE_MIN = 0.9
+local BIGMAP_ZOOM_SCALE_STEP = 0.05
+local BIGMAP_ZOOM_SCALE_DEFAULT = 1
+local BIGMAP_CHANGE_OPACITY_STEP = 0.05
+local BIGMAP_OPACITY_DEFAULT = 0.8
+local BIGMAP_MOVE_STEP = math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 20
+local BIGMAP_BLIP_HERE_SIZE = 6
+
+local BIGMAP_TEXT_WINDOW_BG_COLOR = tocolor(0, 0, 0, 190)
+local BIGMAP_TEXT_WINDOW_CONTENT_MARGIN = 10
+
+local BIGMAP_HELP_TEXT_COLOR = tocolor(241, 241, 241, 255)
+local BIGMAP_HELP_TEXT_FONT = dxCreateFont(FONT_PATH .. "sabankgothic.ttf", 14, false, FONT_QUALITY)
+
+local BIGMAP_LEGEND_ENABLED = true
+local BIGMAP_LEGEND_COLUMNS = 3
+local BIGMAP_LEGEND_TEXT_COLOR = tocolor(172, 203, 241, 255)
+local BIGMAP_LEGEND_TEXT_FONT = dxCreateFont(FONT_PATH .. "sabankgothic.ttf", 16, false, FONT_QUALITY)
+
+local BIGMAP_SWITCH_COMMAND = "radar"
+local BIGMAP_ZOOM_IN_COMMAND = "radar_zoom_in"
+local BIGMAP_ZOOM_OUT_COMMAND = "radar_zoom_out"
+local BIGMAP_OPACITY_UP_COMMAND = "radar_opacity_up"
+local BIGMAP_OPACITY_DOWN_COMMAND = "radar_opacity_down"
+local BIGMAP_MOVE_NORTH_COMMAND = "radar_move_north"
+local BIGMAP_MOVE_SOUTH_COMMAND = "radar_move_south"
+local BIGMAP_MOVE_EAST_COMMAND = "radar_move_east"
+local BIGMAP_MOVE_WEST_COMMAND = "radar_move_west"
+local BIGMAP_SWITCH_HELP_COMMAND = "radar_help"
+local BIGMAP_SWITCH_LEGEND_KEY = "l"
+local BIGMAP_MOVE_MOUSE_KEY = "mouse1"
+
+
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
+
 
 local drawData = {}
-
-drawData.visible = true
 
 drawData.mapTileTextures = {}                    -- Radar.cpp: std::array<std::array<int32, MAX_RADAR_WIDTH_TILES>, MAX_RADAR_HEIGHT_TILES>& gRadarTextures
 drawData.hudSpriteTextures = {}                  -- Hud.h: CSprite2d (&Sprites)[6]
@@ -88,26 +128,83 @@ drawData.radarBorderRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 drawData.radarMapTilesRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 drawData.radarOverlayRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 
+drawData.cursorPrevPos = { 0, 0 }
+drawData.cursorCurrPos = { 0, 0 }
+drawData.cursorOnGui = false
+
 drawData.playerElement = nil
-drawData.playerElementMatrix = nil
+drawData.playerElementMatrix = nil                -- Radar.h: CVector2D& vec2DRadarOrigin
+drawData.playerCameraAngle = 0                    -- Radar.h: float& m_fRadarOrientation
+drawData.playerInterior = nil
+drawData.playerDimension = nil
+drawData.flashingRadarAreaAlphaMultiplier = 0
 
-drawData.radarMapRange = nil                     -- Radar.h: float& m_radarRange
-drawData.radarMapPosition = nil                  -- Radar.h: CVector2D& vec2DRadarOrigin
-drawData.radarMapAngle = nil                     -- Radar.h: float& m_fRadarOrientation
-drawData.radarMapAngleMatrix = nil               -- Radar.h: float& cachedCos; float& cachedSin
-drawData.radarInterior = nil
-drawData.radarDimension = nil
-drawData.flashingRadarAreaAlphaMultiplier = nil
+drawData.showRadar = true
+drawData.radarMapRtView = nil
+drawData.radarMapRtRotView = nil                  -- Radar.h: float& cachedCos; float& cachedSin
 
-function math.clamp(value, min, max)
+drawData.showBigMap = false
+drawData.showBigMapHelp = true
+drawData.showBigMapLegend = false
+drawData.bigMapAlphaMultiplier = BIGMAP_OPACITY_DEFAULT
+drawData.bigMapDrawnSprites = {}
+drawData.bigMapScreenViewTransform = transform2.scale(BIGMAP_ZOOM_SCALE_DEFAULT, BIGMAP_ZOOM_SCALE_DEFAULT)
+drawData.bigMapScreenViewResult = transform2.move(0, 0)
+
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+local function math_clamp(value, min, max)
 
 	return value < min and min or value > max and max or value
 end
 
+local function fromcolor(color)
 
-------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------
+	return
+	bitExtract(color, 16, 8),
+	bitExtract(color, 8, 8),
+	bitExtract(color, 0, 8),
+	bitExtract(color, 24, 8)
+end
+
+-- same as matrix multiplication but ignoring result rotation
+local function getPositionFromMatrixOffset2D(m, x, y)
+
+	local m1 = m[1]
+	local m2 = m[2]
+	local m3 = m[3]
+
+	return
+	x * m1[1] + y * m2[1] + m3[1],
+	x * m1[2] + y * m2[2] + m3[2]
+end
+
+local function getDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2)
+
+	local dx = x2 - x1
+	local dy = y2 - y1
+	local dz = z2 - z1
+
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+local function getDistanceBetweenPoints2D(x1, y1, x2, y2)
+
+	local dx = x2 - x1
+	local dy = y2 - y1
+
+	return math.sqrt(dx * dx + dy * dy)
+end
+
+local function getCursorAbsolutePosition()
+
+	local cx, cy = getCursorPosition()
+	return cx and (SCREEN_WIDTH * cx), cy and (SCREEN_HEIGHT * cy)
+end
 
 local function getVehicleRealType(vehicle)
 
@@ -119,41 +216,49 @@ local function getVehicleRealType(vehicle)
 	return getVehicleType(vehicle)
 end
 
-local function transformWorldToRadarRelativePosition(x, y)
+local function getBlipsByInteriorDimensionOrdered(int, dim)
 
-	return
-	(x - drawData.radarMapPosition[1]) / drawData.radarMapRange,
-	(y - drawData.radarMapPosition[2]) / drawData.radarMapRange
+	local orderings = {}
+	local blips = {}
+	local number = 0
+
+	for _, blip in ipairs(getElementsByType("blip")) do
+
+		if getElementInterior(blip) == int and getElementDimension(blip) == dim then
+
+			number = number + 1
+			blips[number] = blip
+			orderings[blip] = getBlipOrdering(blip)
+		end
+	end
+
+	if number <= 1 then return blips end
+
+	table.sort(blips, function(a, b) return orderings[a] < orderings[b] end)
+
+	return blips
 end
 
-local function rotateRadarRelativePosition(x, y)
+function dxDrawTextWithShadow(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 
-	local m = drawData.radarMapAngleMatrix
-	return
-	x * m[1][1] + y * m[2][1],
-	x * m[1][2] + y * m[2][2]
+	x = math.floor(x)
+	y = math.floor(y)
+
+	local off = math.floor(dxGetFontHeight(scaleY or scaleXY, font) / 1.75 / 6)
+	dxDrawText(text, x + off, y + off, rightX, bottomY, tocolor(0, 0, 0, 255), scaleXY, scaleY, font, ...)
+	dxDrawText(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 end
 
-local function transformRadarRelativeToAbsolutePosition(x, y)
 
-	return
-	RADAR_SIZE_HALF + (RADAR_SIZE_HALF * x),
-	RADAR_SIZE_HALF - (RADAR_SIZE_HALF * y)
-end
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 
-local function transformRadarToScreenPosition(x, y)
-
-	return
-		RADAR_SCREEN_X + x,
-		RADAR_SCREEN_Y + y
-end
 
 -- CRadar::TransformRadarPointToScreenSpace(CVector2D& out, const CVector2D& in) // 0x583480
-local function transformWorldToRadarPosition(x, y)
+local function transformWorldToRadarMapRtView(x, y)
 
-	x, y = transformWorldToRadarRelativePosition(x, y)
-	x, y = transformRadarRelativeToAbsolutePosition(x, y)
-	return x, y
+	return getPositionFromMatrixOffset2D(drawData.radarMapRtView, x, y)
 end
 
 -- Radar.cpp: CRadar::LoadTextures() // 0x5827D0
@@ -164,8 +269,8 @@ local function loadTextures()
 		drawData.radarSpriteTextures[id] = dxCreateTexture(
 			RADAR_SPRITE_TEXTURES_PATH .. name .. TEXTURE_FILE_FORMAT,
 			TEXTURE_QUALITY_FORMAT,
-			true,
-			"clamp"
+			TEXTURE_MIPMAPS,
+			TEXTURE_EDGE
 		)
 	end
 
@@ -173,8 +278,8 @@ local function loadTextures()
 		drawData.radarSpriteBlipTraceTextures[id] = dxCreateTexture(
 			RADAR_BLIP_TRACE_TEXTURES_PATH .. name .. TEXTURE_FILE_FORMAT,
 			TEXTURE_QUALITY_FORMAT,
-			true,
-			"clamp"
+			TEXTURE_MIPMAPS,
+			TEXTURE_EDGE
 		)
 	end
 
@@ -182,8 +287,8 @@ local function loadTextures()
 		drawData.hudSpriteTextures[id] = dxCreateTexture(
 			RADAR_SPRITE_TEXTURES_PATH .. name .. TEXTURE_FILE_FORMAT,
 			TEXTURE_QUALITY_FORMAT,
-			true,
-			"clamp"
+			TEXTURE_MIPMAPS,
+			TEXTURE_EDGE
 		)
 	end
 
@@ -193,8 +298,8 @@ local function loadTextures()
 			drawData.mapTileTextures[y][x] = dxCreateTexture(
 				MAP_TILE_TEXTURES_PATH .. "radar" .. string.format("%02d", (y * MAP_TILES_SIZE + x)) .. TEXTURE_FILE_FORMAT,
 				TEXTURE_QUALITY_FORMAT,
-				true,
-				"clamp"
+				TEXTURE_MIPMAPS,
+				TEXTURE_EDGE
 			)
 		end
 	end
@@ -203,8 +308,8 @@ local function loadTextures()
 	drawData.radarMaskTexture = dxCreateTexture(
 		RADAR_SPRITE_TEXTURES_PATH .. HUD_SPRITE_TEXTURE_NAMES[HUD_SPRITE.RADAR_DISC] .. "_mask" .. TEXTURE_FILE_FORMAT,
 		TEXTURE_QUALITY_FORMAT,
-		true,
-		"clamp"
+		TEXTURE_MIPMAPS,
+		TEXTURE_EDGE
 	)
 
 	return true
@@ -215,52 +320,63 @@ local function init()
 
 	loadTextures()
 
+	setPlayerHudComponentVisible("radar", false)
+	toggleControl("radar", false)
+	toggleControl("radar_zoom_in", false)
+	toggleControl("radar_zoom_out", false)
+	toggleControl("radar_move_north", false)
+	toggleControl("radar_move_south", false)
+	toggleControl("radar_move_east", false)
+	toggleControl("radar_move_west", false)
+	toggleControl("radar_opacity_down", false)
+	toggleControl("radar_opacity_up", false)
+	toggleControl("radar_help", false)
+
 	return true
 end
 
+local function term()
+
+	setPlayerHudComponentVisible("radar", true)
+	toggleControl("radar", true)
+	toggleControl("radar_zoom_in", true)
+	toggleControl("radar_zoom_out", true)
+	toggleControl("radar_move_north", true)
+	toggleControl("radar_move_south", true)
+	toggleControl("radar_move_east", true)
+	toggleControl("radar_move_west", true)
+	toggleControl("radar_opacity_down", true)
+	toggleControl("radar_opacity_up", true)
+	toggleControl("radar_help", true)
+
+	return true
+end
 
 -- Radar.cpp: CRadar::DrawMap() // 0x586B00
 local function calcRadarMapRange(element, matrix)
 
-	if getElementType(element) ~= "vehicle" then
+	if getElementType(element) ~= "vehicle" then return RADAR_MAP_MIN_RANGE end
 
-		return RADAR_MAP_MIN_RANGE
-	end
-
+	local speed = 0
 	if getVehicleRealType(element) == VEHICLE_REAL_TYPE.PLANE then
-
-		local heightLowRatio = matrix[4][3] / ALTIMETER_WORLD_HEIGHT_LOW
-		if heightLowRatio < RADAR_MAP_MIN_RANGE_SPEED then
-			return RADAR_MAP_MAX_RANGE - 10.0
-		end
-		if heightLowRatio >= RADAR_MAP_MAX_RANGE_SPEED then
-			return RADAR_MAP_MAX_RANGE
-		end
-		return (heightLowRatio - RADAR_MAP_MIN_RANGE_SPEED) / 60.0 + (RADAR_MAP_MAX_RANGE - 10.0)
+		-- actually this is height ratio, not speed
+		speed = matrix[4][3] / ALTIMETER_WORLD_HEIGHT_LOW
+	else
+		local vx, vy, vz = getElementVelocity(element)
+		speed = getDistanceBetweenPoints3D(0, 0, 0, vx, vy, vz)
 	end
-
-	local vx, vy, vz = getElementVelocity(element)
-	local speed = getDistanceBetweenPoints3D(0, 0, 0, vx, vy, vz)
 
 	if speed < RADAR_MAP_MIN_RANGE_SPEED then
-		return RADAR_MAP_MIN_RANGE
+		return RADAR_MAP_MIN_RANGE -- original plane's min range value is (RADAR_MAX_RANGE - 10.0)
 	end
 	if speed >= RADAR_MAP_MAX_RANGE_SPEED then
 		return RADAR_MAP_MAX_RANGE
 	end
-	return (speed - RADAR_MAP_MIN_RANGE_SPEED) * (850.0 / (RADAR_MAP_MIN_RANGE_SPEED * 10.0)) + RADAR_MAP_MIN_RANGE
-end
 
--- Radar.h: CachedRotateClockwise(const CVector2D& point)
-local function getAngleMatrix(angle)
-
-	local cos = math.cos(angle)
-	local sin = math.sin(angle)
-
-	return {
-		{ cos, -sin },
-		{ sin, cos }
-	}
+	return (speed - RADAR_MAP_MIN_RANGE_SPEED)
+		/ (RADAR_MAP_MAX_RANGE_SPEED - RADAR_MAP_MIN_RANGE_SPEED)
+		* (RADAR_MAP_MAX_RANGE - RADAR_MAP_MIN_RANGE)
+		+ RADAR_MAP_MIN_RANGE
 end
 
 local function prepareRadarMaskRt()
@@ -326,10 +442,10 @@ local function drawRadarMapTile(tx, ty)
 	local wy = MAP_TILE_WORLD_SIZE * (MAP_TILES_SIZE_HALF - ty)
 
 	-- Move by player position and scale
-	local rtx, rty = transformWorldToRadarPosition(wx, wy)
-	local rtx2, rty2 = transformWorldToRadarPosition(wx + MAP_TILE_WORLD_SIZE, wy - MAP_TILE_WORLD_SIZE)
+	local rtx, rty = transformWorldToRadarMapRtView(wx, wy)
+	local rtx2, rty2 = transformWorldToRadarMapRtView(wx + MAP_TILE_WORLD_SIZE, wy - MAP_TILE_WORLD_SIZE)
 
-	if RADAR_MAP_SHOW_IN_INTERIOR or drawData.radarInterior == 0 then
+	if RADAR_MAP_SHOW_IN_INTERIOR or drawData.playerInterior == 0 then
 
 		if isMapTileInBounds(tx, ty) then
 
@@ -342,12 +458,14 @@ local function drawRadarMapTile(tx, ty)
 			)
 		else
 
-			dxDrawRectangle(
+			-- as sea draws first pixel of top left tile
+			dxDrawImageSection(
 				rtx, rty,
 				rtx2 - rtx, rty2 - rty,
-				MAP_TILE_SEA_COLOR,
-				false,
-				true
+				0, 0, 1, 1,
+				drawData.mapTileTextures[0][0],
+				0, 0, 0,
+				MAP_TILE_COLOR
 			)
 		end
 
@@ -356,7 +474,7 @@ local function drawRadarMapTile(tx, ty)
 		dxDrawRectangle(
 			rtx, rty,
 			rtx2 - rtx, rty2 - rty,
-			MAP_TILE_BLANK_COLOR,
+			MAP_TILE_INTERIOR_COLOR,
 			false,
 			true
 		)
@@ -367,8 +485,8 @@ end
 
 local function drawRadarMapTiles()
 
-	local x = math.floor((drawData.radarMapPosition[1] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
-	local y = math.ceil(MAP_TILES_SIZE - 1 - (drawData.radarMapPosition[2] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
+	local x = math.floor((drawData.playerElementMatrix[4][1] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
+	local y = math.ceil(MAP_TILES_SIZE - 1 - (drawData.playerElementMatrix[4][2] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
 
 	dxSetRenderTarget(drawData.radarMapTilesRt)
 	dxSetBlendMode("modulate_add")
@@ -387,7 +505,36 @@ end
 
 local function calcFlashingRadarAreaAlphaMultiplier()
 
-	return (math.sin((getTickCount() % 1024) / (1024 / MATH_TWO_PI)) + 1.0) / 2.0
+	return (math.sin((getTickCount() % 1024) / (1024 / (math.pi * 2))) + 1.0) / 2.0
+end
+
+local function drawRadarArea(area)
+
+	local dim = getElementDimension(area)
+	if dim ~= drawData.playerDimension then return false end
+
+	local int = getElementInterior(area)
+	if int ~= drawData.playerInterior then return false end
+
+	local x, y, _ = getElementPosition(area)
+	local width, height = getRadarAreaSize(area)
+
+	local x1, y1 = transformWorldToRadarMapRtView(x, y)
+	local x2, y2 = transformWorldToRadarMapRtView(x + width, y + height)
+	local r, g, b, a = getRadarAreaColor(area)
+	if isRadarAreaFlashing(area) then
+		a = a * drawData.flashingRadarAreaAlphaMultiplier
+	end
+
+	dxDrawRectangle(
+		x1, y1,
+		x2 - x1, y2 - y1,
+		tocolor(r, g, b, a),
+		false,
+		true
+	)
+
+	return true
 end
 
 -- Radar.cpp: CRadar::DrawRadarGangOverlay(bool inMenu) // 0x586650
@@ -397,27 +544,7 @@ local function drawRadarAreas()
 	dxSetBlendMode("modulate_add")
 
 	for i, area in ipairs(getElementsByType("radararea")) do
-
-		local x, y, _ = getElementPosition(area)
-		local width, height = getRadarAreaSize(area)
-
-		-- TODO: check if in currrent tiles
-
-		local x1, y1 = transformWorldToRadarPosition(x, y + height)
-		local x2, y2 = transformWorldToRadarPosition(x + width, y)
-		local r, g, b, a = getRadarAreaColor(area)
-		if isRadarAreaFlashing(area) then
-			a = a * drawData.flashingRadarAreaAlphaMultiplier
-		end
-
-		dxDrawRectangle(
-			x1, y1,
-			x2 - x1, y2 - y1,
-			tocolor(r, g, b, a),
-			false,
-			true
-		)
-
+		drawRadarArea(area)
 	end
 
 	dxSetBlendMode("blend")
@@ -428,18 +555,14 @@ end
 
 local function drawArtificialHorizon()
 
-	if getElementType(drawData.playerElement) ~= "vehicle" then
-		return false
-	end
-	if getVehicleRealType(drawData.playerElement) ~= VEHICLE_REAL_TYPE.PLANE then
-		return false
-	end
+	if getElementType(drawData.playerElement) ~= "vehicle" then return false end
+	if getVehicleRealType(drawData.playerElement) ~= VEHICLE_REAL_TYPE.PLANE then return false end
 
 	dxSetRenderTarget(drawData.radarOverlayRt)
 	dxSetBlendMode("modulate_add")
 
 	local pitch = math.atan2(-drawData.playerElementMatrix[2][3], drawData.playerElementMatrix[3][3]);
-	local horizon = RADAR_SIZE_HALF - (RADAR_SIZE_HALF * (pitch / MATH_PI))
+	local horizon = RADAR_SIZE_HALF - (RADAR_SIZE_HALF * (pitch / math.pi))
 	dxDrawRectangle(
 		0, 0,
 		RADAR_SIZE, horizon,
@@ -472,14 +595,10 @@ end
 
 local function drawAltimeter()
 
-	if getElementType(drawData.playerElement) ~= "vehicle" then
-		return true
-	end
+	if getElementType(drawData.playerElement) ~= "vehicle" then return true end
 
 	local vehicleRealType = getVehicleRealType(drawData.playerElement)
-	if not (vehicleRealType == VEHICLE_REAL_TYPE.PLANE or vehicleRealType == VEHICLE_REAL_TYPE.HELICOPTER) then
-		return true
-	end
+	if not (vehicleRealType == VEHICLE_REAL_TYPE.PLANE or vehicleRealType == VEHICLE_REAL_TYPE.HELICOPTER) then return true end
 
 	dxDrawRectangle(
 		ALTIMETER_BG_SCREEN_X, ALTIMETER_BG_SCREEN_Y,
@@ -487,15 +606,15 @@ local function drawAltimeter()
 		ALTIMETER_BG_COLOR
 	)
 
-	local height = drawData.radarMapPosition[3]
+	local height = drawData.playerElementMatrix[4][3]
 	local limit = ALTIMETER_WORLD_HEIGHT_MAX
 	if height <= ALTIMETER_WORLD_HEIGHT_LOW then
-		limit = ALTIMETER_WORLD_HEIGHT_LOW;
+		limit = ALTIMETER_WORLD_HEIGHT_LOW
 	end
 
 	dxDrawRectangle(
 		ALTIMETER_SCREEN_X,
-		ALTIMETER_BG_SCREEN_Y + ALTIMETER_BG_HEIGHT * (math.clamp(1 - height / limit, 0, 1)),
+		ALTIMETER_BG_SCREEN_Y + ALTIMETER_BG_HEIGHT * (math_clamp(1 - height / limit, 0, 1)),
 		ALTIMETER_WIDTH,
 		ALTIMETER_HEIGHT,
 		ALTIMETER_COLOR,
@@ -512,7 +631,7 @@ local function drawRadarMaskShader()
 	dxSetShaderValue(drawData.radarMaskShader, "sOverlayTexture", drawData.radarOverlayRt)
 	dxSetShaderValue(drawData.radarMaskShader, "sMaskTexture", drawData.radarMapMaskRt)
 
-	dxSetShaderValue(drawData.radarMaskShader, "gUVRotAngle", -drawData.radarMapAngle)
+	dxSetShaderValue(drawData.radarMaskShader, "gUVRotAngle", -drawData.playerCameraAngle)
 
 	dxDrawImage(RADAR_SCREEN_X, RADAR_SCREEN_Y, RADAR_SIZE, RADAR_SIZE, drawData.radarMaskShader)
 
@@ -533,147 +652,153 @@ local function drawRadarBorder()
 end
 
 -- Radar.cpp: CRadar::LimitRadarPoint(CVector2D& point) // 0x5832F0
-local function limitVectorLength(x, y, limit)
+local function limitVectorLength(x1, y1, x2, y2, limit)
 
-	local length = getDistanceBetweenPoints2D(0, 0, x, y)
+	local length = getDistanceBetweenPoints2D(x1, y1, x2, y2)
 	if length > limit then
 		local k = limit / length
-		x, y = x * k, y * k
+		x2, y2 = (x2 - x1) * k + x1, (y2 - y1) * k + y1
 	end
 
-	return x, y
+	return x2, y2
 end
 
 -- Radar.cpp: GetRadarAndScreenPos(float* radarPointDist)
-local function transformWorldToScreenPositionBlip(x, y)
+-- Radar.h: CachedRotateClockwise(const CVector2D& point)
+local function transformWorldToRadarMapBlipView(x, y)
 
-	x, y = transformWorldToRadarRelativePosition(x, y)
-	x, y = rotateRadarRelativePosition(x, y)
-	x, y = limitVectorLength(x, y, RADAR_BLIP_VECTOR_MAX_LENGTH)
-	x, y = transformRadarRelativeToAbsolutePosition(x, y)
-	x, y = transformRadarToScreenPosition(x, y)
+	x, y = getPositionFromMatrixOffset2D(drawData.radarMapRtRotView, x, y)
 
-	return x, y
+	return limitVectorLength(RADAR_SIZE_HALF, RADAR_SIZE_HALF, x, y, RADAR_BLIP_VECTOR_MAX_LENGTH)
+end
+
+local function getRadarSpriteBlipTraceFromHeight(z)
+
+	local diff = z - drawData.playerElementMatrix[4][3]
+	if diff > RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF then return RADAR_TRACE.HIGH end
+	if diff < RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF then return RADAR_TRACE.LOW; end
+	return RADAR_TRACE.NORMAL
+end
+
+local function getRadarSpriteBlipSize(spriteId, size)
+
+	size = size / RADAR_BLIP_SIZE_GTASA_DEFAULT * RADAR_BLIP_SIZE
+
+	if spriteId == RADAR_SPRITE.CENTRE then return size * RADAR_BLIP_CENTRE_SIZE_MULTIPLIER end
+	if spriteId == RADAR_SPRITE.NONE then return size * RADAR_BLIP_TRACE_SIZE_MULTIPLIER end
+	return size
 end
 
 -- Radar.cpp: CRadar::DrawRadarSprite(eRadarSprite spriteId, float x, float y, uint8 alpha) // 0x585FF0
-local function drawRadarSprite(spriteId, x, y, z, color, size, rot)
+local function drawRadarSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 
-	x, y = transformWorldToScreenPositionBlip(x, y)
-	size = RADAR_BLIP_SIZE * (size / RADAR_BLIP_SIZE_GTASA_DEFAULT)
+	x, y = transformWorldToRadarMapBlipView(x, y)
+	rot = rot and (math.deg(drawData.playerCameraAngle) - rot) or 0
+	size = getRadarSpriteBlipSize(spriteId, size)
+	a = a * RADAR_BLIP_ALPHA_MULTIPLIER
 
 	local texture = drawData.radarSpriteTextures[spriteId]
-
 	if spriteId == RADAR_SPRITE.NONE then
-
-		size = size * RADAR_BLIP_TRACE_SIZE_MULTIPLIER
-		local trace = RADAR_TRACE.NORMAL
-
-		local diff = z - drawData.radarMapPosition[3]
-		if diff > RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF then
-			trace = RADAR_TRACE.HIGH
-		end
-		if diff < RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF then
-			trace = RADAR_TRACE.LOW;
-		end
-
-		texture = drawData.radarSpriteBlipTraceTextures[trace]
+		texture = drawData.radarSpriteBlipTraceTextures[getRadarSpriteBlipTraceFromHeight(z)]
 	end
+	if not texture then return false end
 
 	dxDrawImage(
-		x - size / 2, y - size / 2, size, size,
+		RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size / 2),
+		math.floor(size), math.floor(size),
 		texture,
-		rot or 0, 0, 0,
-		color
+		rot, 0, 0,
+		tocolor(r, g, b, a)
 	)
 
 	return true
 end
 
 -- Radar.cpp: CRadar::DrawCoordBlip(int32 blipIndex, bool isSprite) // 0x586D60
-local function drawBlip(blip)
-
-	local dim = getElementDimension(blip)
-	if dim ~= drawData.radarDimension then
-		return false
-	end
-
-	local int = getElementInterior(blip)
-	if (not RADAR_BLIP_SHOW_OTHER_INTERIOR) and int ~= drawData.radarInterior then
-		return false
-	end
+local function drawRadarBlip(blip)
 
 	local x, y, z = getElementPosition(blip)
-	local size = getBlipSize(blip)
+	local limit = getBlipVisibleDistance(blip)
 
-	local dis = getDistanceBetweenPoints3D(
-		drawData.radarMapPosition[1], drawData.radarMapPosition[2], drawData.radarMapPosition[3],
-		x, y, z
-	)
-	if dis > getBlipVisibleDistance(blip) then
-		return false
+	if limit <= 0 then return false end
+	if limit < MAP_WORLD_SIZE then
+		local dis = getDistanceBetweenPoints2D(
+			drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2],
+			x, y)
+		if dis > limit then return false end
 	end
 
 	local r, g, b, a = getBlipColor(blip)
-	a = a * RADAR_BLIP_ALPHA_MULTIPLIER
 
-	drawRadarSprite(getBlipIcon(blip), x, y, z, tocolor(r, g, b, a), size);
+	drawRadarSprite(getBlipIcon(blip), x, y, z, r, g, b, a, getBlipSize(blip));
 
 	return true
 end
 
 -- Radar.cpp: CRadar::DrawBlips() // 0x588050
-local function drawBlips()
+local function drawRadarBlips()
 
 	drawRadarSprite(
 		RADAR_SPRITE.NORTH,
-		drawData.radarMapPosition[1],
-		drawData.radarMapPosition[2] + MAP_WORLD_SIZE,
-		drawData.radarMapPosition[3],
-		RADAR_BLIP_NORTH_COLOR,
-		RADAR_BLIP_SIZE_GTASA_DEFAULT * RADAR_BLIP_NORTH_SIZE_MULTIPLIER)
+		drawData.playerElementMatrix[4][1],
+		drawData.playerElementMatrix[4][2] + MAP_WORLD_SIZE,
+		drawData.playerElementMatrix[4][3],
+		255, 255, 255, 255,
+		RADAR_BLIP_SIZE_GTASA_DEFAULT)
 
-	local blips = getElementsByType("blip")
-	table.sort(blips, function(a, b)
-		return getBlipOrdering(a) < getBlipOrdering(b)
-	end)
-	for i, blip in ipairs(blips) do
-		drawBlip(blip)
+	for _, blip in ipairs(getBlipsByInteriorDimensionOrdered(drawData.playerInterior, drawData.playerDimension)) do
+		drawRadarBlip(blip)
 	end
 
 	if not (getElementType(drawData.playerElement) == "vehicle" and getVehicleRealType(drawData.playerElement) == VEHICLE_REAL_TYPE.PLANE) then
 
-		local heading = math.atan2(-drawData.playerElementMatrix[2][1], drawData.playerElementMatrix[2][2])
-		local angle = heading - drawData.radarMapAngle - math.rad(180.0)
 		drawRadarSprite(
 			RADAR_SPRITE.CENTRE,
-			drawData.radarMapPosition[1],
-			drawData.radarMapPosition[2],
-			drawData.radarMapPosition[3],
-			RADAR_BLIP_CENTRE_COLOR,
-			RADAR_BLIP_SIZE_GTASA_DEFAULT * RADAR_BLIP_CENTRE_SIZE_MULTIPLIER,
-			180 - math.deg(angle)
+			drawData.playerElementMatrix[4][1],
+			drawData.playerElementMatrix[4][2],
+			drawData.playerElementMatrix[4][3],
+			255, 255, 255, 255,
+			RADAR_BLIP_SIZE_GTASA_DEFAULT,
+			math.deg(math.atan2(-drawData.playerElementMatrix[2][1], drawData.playerElementMatrix[2][2]))
 		)
 	end
 
 	return true
 end
 
+local function updateRadarMapRtViews()
+
+	-- Radar.h: float& m_radarRange (radar world radius)
+	local radarMapRange = calcRadarMapRange(drawData.playerElement, drawData.playerElementMatrix)
+
+	local worldToRtRelView = transform2.mul(
+		transform2.move(-drawData.playerElementMatrix[4][1], -drawData.playerElementMatrix[4][2]),
+		transform2.scale(1 / radarMapRange, 1 / radarMapRange))
+
+	local rtRelToRtAbsView = transform2.mul(transform2.mul(
+		transform2.scale(1, -1),
+		transform2.move(1, 1)),
+		transform2.scale(RADAR_SIZE_HALF, RADAR_SIZE_HALF))
+
+	drawData.radarMapRtView = transform2.mul(
+		worldToRtRelView,
+		rtRelToRtAbsView)
+
+	drawData.radarMapRtRotView = transform2.mul(transform2.mul(
+		worldToRtRelView,
+		transform2.rotate(-drawData.playerCameraAngle)),
+		rtRelToRtAbsView)
+
+	return true
+end
+
 -- Hud.cpp: CHud::DrawRadar() // 0x58A330
-function draw()
+local function drawRadar()
 
-	if not drawData.visible then return true end
+	if not drawData.showRadar then return true end
+	if drawData.showBigMap then return true end
 
-	drawData.playerElement = getPedOccupiedVehicle(localPlayer) or localPlayer
-	drawData.playerElementMatrix = getElementMatrix(drawData.playerElement)
-
-	drawData.radarMapRange = calcRadarMapRange(drawData.playerElement, drawData.playerElementMatrix)
-	drawData.radarMapPosition = drawData.playerElementMatrix[4]
-	drawData.radarMapAngle = math.rad(({ getElementRotation(camera) })[3])
-	drawData.radarMapAngleMatrix = getAngleMatrix(drawData.radarMapAngle)
-	drawData.radarInterior = getElementInterior(localPlayer)
-	drawData.radarDimension = getElementDimension(localPlayer)
-	drawData.flashingRadarAreaAlphaMultiplier = calcFlashingRadarAreaAlphaMultiplier()
+	updateRadarMapRtViews()
 
 	-- reset RT
 	dxSetRenderTarget(drawData.radarMapTilesRt, true)
@@ -692,31 +817,526 @@ function draw()
 	drawAltimeter()
 	drawRadarMaskShader()
 	drawRadarBorder()
-	drawBlips()
+	drawRadarBlips()
 
 	return true
 end
 
+local function transformWorldToBigMapScreenView(x, y)
+
+	return getPositionFromMatrixOffset2D(drawData.bigMapScreenViewResult, x, y)
+end
+
+local function moveBigMap(x, y)
+
+	drawData.bigMapScreenViewTransform = transform2.mul(
+		drawData.bigMapScreenViewTransform,
+		transform2.move(x, y))
+
+	-- TODO: refactor
+	local scale = drawData.bigMapScreenViewTransform[1][1]
+	local bigMapSize = BIGMAP_SIZE * scale
+	local bigMapSizeBordered = bigMapSize / BIGMAP_ZOOM_SCALE_MIN
+
+	local x0 = (SCREEN_WIDTH - bigMapSize) / 2
+	local y0 = (SCREEN_HEIGHT - bigMapSize) / 2
+
+	local dx = math.max(0, (bigMapSizeBordered - SCREEN_WIDTH) / 2)
+	local dy = math.max(0, (bigMapSizeBordered - SCREEN_HEIGHT) / 2)
+
+	drawData.bigMapScreenViewTransform[3][1] = math_clamp(drawData.bigMapScreenViewTransform[3][1], x0 - dx, x0 + dx)
+	drawData.bigMapScreenViewTransform[3][2] = math_clamp(drawData.bigMapScreenViewTransform[3][2], y0 - dy, y0 + dy)
+
+	return true
+end
+
+local function updateBigMapCursorMoving()
+
+	if not BIGMAP_CURSOR_ENABLED then return end
+	if not drawData.showBigMap then return end
+	if not isCursorShowing() then return end
+	if not getKeyState(BIGMAP_MOVE_MOUSE_KEY) then return end
+	if guiGetInputEnabled() then return end
+	if isMTAWindowActive() then return end
+	if drawData.cursorOnGui then return end
+
+	moveBigMap(
+		drawData.cursorCurrPos[1] - drawData.cursorPrevPos[1],
+		drawData.cursorCurrPos[2] - drawData.cursorPrevPos[2])
+
+	return true
+end
+
+local function updateBigMapScreenView()
+
+	drawData.bigMapScreenViewResult = transform2.mul(transform2.mul(transform2.mul(
+		transform2.scale(1 / MAP_WORLD_SIZE, -1 / MAP_WORLD_SIZE),
+		transform2.move(0.5, 0.5)),
+		transform2.scale(BIGMAP_SIZE, BIGMAP_SIZE)),
+		drawData.bigMapScreenViewTransform)
+
+	return true
+end
+
+local function drawBigMapTiles()
+
+	local sx1, sy1 = transformWorldToBigMapScreenView(-MAP_WORLD_SIZE_HALF, MAP_WORLD_SIZE_HALF)
+	local sx2, sy2 = transformWorldToBigMapScreenView(MAP_WORLD_SIZE_HALF, -MAP_WORLD_SIZE_HALF)
+	local size = (sx2 - sx1) / MAP_TILES_SIZE
+
+	local r, g, b, a = fromcolor(MAP_TILE_COLOR)
+	a = a * drawData.bigMapAlphaMultiplier
+	local color = tocolor(r, g, b, a)
+
+	for ty = 0, MAP_TILES_SIZE - 1 do
+		for tx = 0, MAP_TILES_SIZE - 1 do
+
+			dxDrawImage(
+				sx1 + (tx * size), sy1 + (ty * size),
+				size, size,
+				drawData.mapTileTextures[ty][tx],
+				0, 0, 0,
+				color
+			)
+		end
+	end
+
+	-- draws sea background
+	dxDrawImageSection(
+		0, 0,
+		sx1, SCREEN_HEIGHT,
+		0, 0, 1, 1,
+		drawData.mapTileTextures[0][0],
+		0, 0, 0,
+		color
+	)
+	dxDrawImageSection(
+		sx2, 0,
+		SCREEN_WIDTH - sx2, SCREEN_HEIGHT,
+		0, 0, 1, 1,
+		drawData.mapTileTextures[0][0],
+		0, 0, 0,
+		color
+	)
+	dxDrawImageSection(
+		sx1, 0,
+		sx2 - sx1, sy1,
+		0, 0, 1, 1,
+		drawData.mapTileTextures[0][0],
+		0, 0, 0,
+		color
+	)
+	dxDrawImageSection(
+		sx1, sy2,
+		sx2 - sx1, SCREEN_HEIGHT - sy2,
+		0, 0, 1, 1,
+		drawData.mapTileTextures[0][0],
+		0, 0, 0,
+		color
+	)
+
+	return true
+end
+
+local function drawBigMapRadarArea(area)
+
+	local dim = getElementDimension(area)
+	if dim ~= drawData.playerDimension then return false end
+
+	local int = getElementInterior(area)
+	if int ~= drawData.playerInterior then return false end
+
+	local x, y, _ = getElementPosition(area)
+	local width, height = getRadarAreaSize(area)
+
+	local x1, y1 = transformWorldToBigMapScreenView(x, y + height)
+	local x2, y2 = transformWorldToBigMapScreenView(x + width, y)
+	local r, g, b, a = getRadarAreaColor(area)
+	a = a * drawData.bigMapAlphaMultiplier
+	if isRadarAreaFlashing(area) then
+		a = a * drawData.flashingRadarAreaAlphaMultiplier
+	end
+
+	dxDrawRectangle(
+		x1, y1,
+		x2 - x1, y2 - y1,
+		tocolor(r, g, b, a),
+		false,
+		true
+	)
+
+	return true
+end
+
+local function drawBigMapRadarAreas()
+
+	for i, area in ipairs(getElementsByType("radararea")) do
+		drawBigMapRadarArea(area)
+	end
+
+	return true
+end
+
+local function drawBigMapSprite(spriteId, x, y, z, r, g, b, a, size, rot)
+
+	x, y = transformWorldToBigMapScreenView(x, y)
+	rot = rot and (-rot) or 0
+	size = getRadarSpriteBlipSize(spriteId, size)
+	a = a * drawData.bigMapAlphaMultiplier
+
+	local texture = drawData.radarSpriteTextures[spriteId]
+	if spriteId == RADAR_SPRITE.NONE then
+		texture = drawData.radarSpriteBlipTraceTextures[getRadarSpriteBlipTraceFromHeight(z)]
+	end
+	if not texture then return false end
+
+	-- for MAP_HERE blip center is upper
+	if spriteId == RADAR_SPRITE.MAP_HERE then
+
+		dxDrawImage(
+			x - (size / 2), y,
+			size, size,
+			texture,
+			rot, 0, -size / 2,
+			tocolor(r, g, b, a)
+		)
+	else
+
+		dxDrawImage(
+			x - (size / 2), y - (size / 2),
+			size, size,
+			texture,
+			rot, 0, 0,
+			tocolor(r, g, b, a)
+		)
+	end
+
+	drawData.bigMapDrawnSprites[spriteId] = true
+
+	return true
+end
+
+local function drawBigMapBlip(blip)
+
+	local x, y, z = getElementPosition(blip)
+	local r, g, b, a = getBlipColor(blip)
+	drawBigMapSprite(getBlipIcon(blip), x, y, z, r, g, b, a, getBlipSize(blip));
+
+	return true
+end
+
+local function drawBigMapBlips()
+
+	for _, blip in ipairs(getBlipsByInteriorDimensionOrdered(drawData.playerInterior, drawData.playerDimension)) do
+		drawBigMapBlip(blip)
+	end
+
+	drawBigMapSprite(
+		RADAR_SPRITE.MAP_HERE,
+		drawData.playerElementMatrix[4][1],
+		drawData.playerElementMatrix[4][2],
+		drawData.playerElementMatrix[4][3],
+		255, 255, 255, 255 * (getTickCount() % 1000 < 700 and 1 or 0),
+		BIGMAP_BLIP_HERE_SIZE,
+		math.deg(math.atan2(-drawData.playerElementMatrix[2][1], drawData.playerElementMatrix[2][2]))
+	)
+
+	return true
+end
+
+local function getControlsKeys(controls)
+
+	local keys = {}
+
+	for i, control in ipairs(controls) do
+		local t = getBoundKeys(control)
+		if t then
+			for key, state in pairs(t) do
+				table.insert(keys, key)
+			end
+		end
+	end
+
+	table.sort(keys)
+
+	return keys
+end
+
+local function drawBigMapHelp()
+
+	if not drawData.showBigMapHelp then return false end
+
+	local rows = {
+		{ "help", table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
+		{ "legend", BIGMAP_SWITCH_LEGEND_KEY },
+		{ "zoom", table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
+		{ "move", (BIGMAP_CURSOR_ENABLED and "mouse1 / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
+		{ "opacity", table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
+	}
+
+	local actionTextWidth = 0
+	local keysTextWidth = 0
+	for i, row in ipairs(rows) do
+		row[1] = row[1]
+		row[2] = row[2]
+		actionTextWidth = math.max(actionTextWidth, dxGetTextWidth(row[1], 1, BIGMAP_HELP_TEXT_FONT))
+		keysTextWidth = math.max(keysTextWidth, dxGetTextWidth(row[2], 1, BIGMAP_HELP_TEXT_FONT))
+	end
+
+	local textHeight = dxGetFontHeight(1, BIGMAP_HELP_TEXT_FONT)
+	local bgWidth = math.floor(actionTextWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2 + keysTextWidth + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgHeight = math.floor(textHeight * #rows + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgX = math.floor((SCREEN_WIDTH - bgWidth) / 2)
+	local bgY = math.floor(SCREEN_HEIGHT - bgHeight - BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
+
+	dxDrawRectangle(
+		bgX, bgY,
+		bgWidth, bgHeight,
+		BIGMAP_TEXT_WINDOW_BG_COLOR,
+		false,
+		false
+	)
+
+	for i, row in ipairs(rows) do
+
+		local x = bgX + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN
+		local y = bgY + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN + ((i - 1) * textHeight)
+		dxDrawTextWithShadow(
+			row[1],
+			x, y, nil, nil,
+			BIGMAP_HELP_TEXT_COLOR,
+			1, 1,
+			BIGMAP_HELP_TEXT_FONT
+		)
+
+		x = x + actionTextWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2
+		dxDrawTextWithShadow(
+			row[2], x, y, nil, nil,
+			BIGMAP_HELP_TEXT_COLOR,
+			1, 1,
+			BIGMAP_HELP_TEXT_FONT
+		)
+	end
+
+	return true
+end
+
+local function collectBigMapLegendItems()
+
+	local items = {}
+
+	local icons = {}
+	for icon, _ in pairs(drawData.bigMapDrawnSprites) do
+		table.insert(icons, icon)
+	end
+	table.sort(icons)
+
+	for _, icon in ipairs(icons) do
+		local texture = drawData.radarSpriteTextures[icon]
+		local name = RADAR_SPRITE_NAMES[icon]
+		if name and texture then
+			table.insert(items, { texture, name })
+		end
+	end
+
+	return items
+end
+
+local function drawBigMapLegend()
+
+	if not BIGMAP_LEGEND_ENABLED then return false end
+	if not drawData.showBigMapLegend then return false end
+
+	local items = collectBigMapLegendItems()
+
+	local columns = math.min(BIGMAP_LEGEND_COLUMNS, #items)
+	local textWidth, textHeight = dxGetTextSize(string.rep("W", 15), 0, 1, 1, BIGMAP_LEGEND_TEXT_FONT)
+	local itemHeight = textHeight + 5
+	local iconSize = textHeight
+	local itemWidth = iconSize + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN + textWidth
+
+	local bgWidth = math.floor((columns * itemWidth) + (columns * BIGMAP_TEXT_WINDOW_CONTENT_MARGIN) + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
+	local bgHeight = math.floor(itemHeight * math.ceil(#items / columns) + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgX = math.floor((SCREEN_WIDTH - bgWidth) / 2)
+	local bgY = math.min(bgX, math.floor((SCREEN_HEIGHT - bgHeight) / 2))
+
+	dxDrawRectangle(
+		bgX, bgY,
+		bgWidth, bgHeight,
+		BIGMAP_TEXT_WINDOW_BG_COLOR,
+		false,
+		false
+	)
+
+	for i, item in ipairs(items) do
+
+		local column = (i - 1) % BIGMAP_LEGEND_COLUMNS + 1
+		local row = math.ceil(i / BIGMAP_LEGEND_COLUMNS)
+
+		local x = bgX + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN + ((column - 1) * (itemWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN))
+		local y = bgY + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN + ((row - 1) * itemHeight)
+
+		dxDrawImage(
+			x, y,
+			iconSize, iconSize,
+			item[1],
+			0, 0, 0,
+			tocolor(255, 255, 255, 255)
+		)
+
+		x = x + iconSize + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN
+		dxDrawTextWithShadow(item[2], x, y, nil, nil, BIGMAP_LEGEND_TEXT_COLOR, 1, 1, BIGMAP_LEGEND_TEXT_FONT)
+	end
+
+	return true
+end
+
+local function drawBigMap()
+
+	if not drawData.showBigMap then return true end
+
+	drawData.bigMapDrawnSprites = {}
+
+	updateBigMapCursorMoving()
+	updateBigMapScreenView()
+
+	drawBigMapTiles()
+	drawBigMapRadarAreas()
+	drawBigMapBlips()
+	drawBigMapHelp()
+	drawBigMapLegend()
+
+	return true
+end
+
+local function switchBigMap()
+
+	drawData.showBigMap = not drawData.showBigMap
+	showCursor(BIGMAP_CURSOR_ENABLED and drawData.showBigMap)
+
+	if drawData.showBigMap then
+
+		if BIGMAP_HIDE_CHAT then
+			drawData.bigMapSwitchChatWasVisible = isChatVisible()
+			if drawData.bigMapSwitchChatWasVisible then
+				showChat(false)
+			end
+		end
+
+		updateBigMapScreenView()
+		-- player position as center of map
+		local x, y = transformWorldToBigMapScreenView(drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2])
+		moveBigMap(-x + SCREEN_WIDTH / 2, -y + SCREEN_HEIGHT / 2)
+
+	else
+		if drawData.bigMapSwitchChatWasVisible then
+			showChat(true)
+		end
+	end
+	return drawData.showBigMap
+end
+
+local function switchBigMapHelp()
+
+	if not drawData.showBigMap then return false end
+
+	drawData.showBigMapHelp = not drawData.showBigMapHelp
+
+	return drawData.showBigMapHelp
+end
+
+local function switchBigMapLegend()
+
+	if not drawData.showBigMap then return false end
+
+	drawData.showBigMapLegend = not drawData.showBigMapLegend
+
+	return drawData.showBigMapLegend
+end
+
+local function zoomBigMap(step)
+
+	if not drawData.showBigMap then return false end
+
+	local cx, cy = drawData.cursorCurrPos[1], drawData.cursorCurrPos[2]
+	cx, cy = cx or SCREEN_WIDTH / 2, cy or SCREEN_HEIGHT / 2
+
+	local scale = 1 + step
+
+	drawData.bigMapScreenViewTransform = transform2.mul(transform2.mul(
+		drawData.bigMapScreenViewTransform,
+		transform2.move(-cx, -cy)),
+		transform2.scale(scale, scale))
+
+	drawData.bigMapScreenViewTransform = transform2.mul(transform2.mul(
+		drawData.bigMapScreenViewTransform,
+		transform2.scale(
+			math_clamp(drawData.bigMapScreenViewTransform[1][1], BIGMAP_ZOOM_SCALE_MIN, BIGMAP_ZOOM_SCALE_MAX) / drawData.bigMapScreenViewTransform[1][1],
+			math_clamp(drawData.bigMapScreenViewTransform[2][2], BIGMAP_ZOOM_SCALE_MIN, BIGMAP_ZOOM_SCALE_MAX) / drawData.bigMapScreenViewTransform[2][2])),
+		transform2.move(cx, cy))
+
+	-- clamps offset
+	moveBigMap(0, 0)
+
+	return true
+end
+
+local function changeBigMapOpacity(step)
+
+	if not drawData.showBigMap then return false end
+
+	drawData.bigMapAlphaMultiplier = math_clamp(
+		drawData.bigMapAlphaMultiplier + step, 0.25, 1)
+
+	return true
+end
+
+local function draw()
+
+	drawData.cursorPrevPos = drawData.cursorCurrPos
+	drawData.cursorCurrPos = { getCursorAbsolutePosition() }
+
+	drawData.playerElement = getPedOccupiedVehicle(localPlayer) or localPlayer
+	drawData.playerElementMatrix = getElementMatrix(drawData.playerElement)
+	drawData.playerCameraAngle = math.rad(({ getElementRotation(camera) })[3])
+	drawData.playerInterior = getElementInterior(localPlayer)
+	drawData.playerDimension = getElementDimension(localPlayer)
+	drawData.flashingRadarAreaAlphaMultiplier = calcFlashingRadarAreaAlphaMultiplier()
+
+	drawRadar()
+	drawBigMap()
+
+	return true
+end
+
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
 init()
+addEventHandler("onClientResourceStop", resourceRoot, term)
 
-addEventHandler("onClientRestore", root,
-	function()
-		drawData.areRenderTargetsReady = false
-	end
-)
+addEventHandler("onClientRestore", root, function() drawData.areRenderTargetsReady = false end)
+addEventHandler("onClientRender", root, draw)
 
-addEventHandler("onClientRender", root,
-	function()
-		draw()
-	end
-)
+bindKey(BIGMAP_SWITCH_LEGEND_KEY, "down", switchBigMapLegend)
+addCommandHandler(BIGMAP_SWITCH_COMMAND, switchBigMap)
+addCommandHandler(BIGMAP_SWITCH_HELP_COMMAND, switchBigMapHelp)
+addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCALE_STEP) end)
+addCommandHandler(BIGMAP_ZOOM_OUT_COMMAND, function() zoomBigMap(-BIGMAP_ZOOM_SCALE_STEP) end)
+addCommandHandler(BIGMAP_OPACITY_UP_COMMAND, function() changeBigMapOpacity(BIGMAP_CHANGE_OPACITY_STEP) end)
+addCommandHandler(BIGMAP_OPACITY_DOWN_COMMAND, function() changeBigMapOpacity(-BIGMAP_CHANGE_OPACITY_STEP) end)
+addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function() moveBigMap(0, BIGMAP_MOVE_STEP) end)
+addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function() moveBigMap(0, -BIGMAP_MOVE_STEP) end)
+addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function() moveBigMap(BIGMAP_MOVE_STEP, 0) end)
+addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function() moveBigMap(-BIGMAP_MOVE_STEP, 0) end)
 
-setPlayerHudComponentVisible("radar", false)
-addEventHandler("onClientResourceStop", resourceRoot,
-	function()
-		setPlayerHudComponentVisible("radar", true)
-	end
-)
+addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
+addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
+addEventHandler("onClientMouseLeave", root, function(_, _, enteredGui) drawData.cursorOnGui = enteredGui ~= nil end)
+
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -724,14 +1344,14 @@ addEventHandler("onClientResourceStop", resourceRoot,
 
 function getMRadarVisible()
 
-	return drawData.visible
+	return drawData.showRadar
 end
 
 function setMRadarVisible(visible)
 	if type(visible) ~= "boolean" then error("bad argument #1 'visible' to 'setMRadarVisible' (boolean expected)", 1) end
 
-	if drawData.visible == visible then return false end
-	drawData.visible = visible
+	if drawData.showRadar == visible then return false end
+	drawData.showRadar = visible
 
 	return true
 end
