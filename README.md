@@ -14,7 +14,8 @@ Reengineered original GTA:SA radar for MTA:SA
 
 ## Settings
 You can configure radar with predefined global Lua variables. See `mradar_main_client.lua` script file. Some of important setting see below
-- `RADAR_BLIP_COLOR_ENABLED` (**default is `false`**) - default blips color (usually blips have red or black color, u should always define blips color for use this feature) 
+- `RADAR_BLIP_COLOR_ENABLED` (**default is `false`**) - enables blips painting (usually blips have red or black color, u should always define blips color when this feature is enabled) 
+- `BIGMAP_CURSOR_ENABLED` (**default is `false`**) - enables cursor when big map (F11) is visible
 
 ## Exported client-side functions
 - `getMRadarVisible()`

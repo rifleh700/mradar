@@ -72,7 +72,8 @@ local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
 -- F11 map
-local BIGMAP_CURSOR_ENABLED = true
+local BIGMAP_CURSOR_ENABLED = false
+local BIGMAP_ATTACH_TO_PLAYER = true
 local BIGMAP_HIDE_CHAT = true
 local BIGMAP_SIZE = math.max(SCREEN_WIDTH, SCREEN_HEIGHT)
 local BIGMAP_ZOOM_SCALE_MAX = 4
@@ -80,7 +81,7 @@ local BIGMAP_ZOOM_SCALE_MIN = 0.9
 local BIGMAP_ZOOM_SCALE_STEP = 0.05
 local BIGMAP_ZOOM_SCALE_DEFAULT = 1
 local BIGMAP_CHANGE_OPACITY_STEP = 0.05
-local BIGMAP_OPACITY_DEFAULT = 0.8
+local BIGMAP_OPACITY_DEFAULT = 0.6
 local BIGMAP_MOVE_STEP = math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 20
 local BIGMAP_BLIP_HERE_SIZE = 6
 
@@ -147,6 +148,7 @@ drawData.radarMapRtRotView = nil                  -- Radar.h: float& cachedCos; 
 drawData.showBigMap = false
 drawData.showBigMapHelp = true
 drawData.showBigMapLegend = false
+drawData.bigMapWasMoved = false
 drawData.bigMapAlphaMultiplier = BIGMAP_OPACITY_DEFAULT
 drawData.bigMapDrawnSprites = {}
 drawData.bigMapScreenViewTransform = transform2.scale(BIGMAP_ZOOM_SCALE_DEFAULT, BIGMAP_ZOOM_SCALE_DEFAULT)
@@ -878,9 +880,23 @@ local function updateBigMapCursorMoving()
 	if isMTAWindowActive() then return end
 	if drawData.cursorOnGui then return end
 
+	drawData.bigMapWasMoved = true
+
 	moveBigMap(
 		drawData.cursorCurrPos[1] - drawData.cursorPrevPos[1],
 		drawData.cursorCurrPos[2] - drawData.cursorPrevPos[2])
+
+	return true
+end
+
+local function updateBigMapPlayerMoving()
+
+	if not BIGMAP_ATTACH_TO_PLAYER then return end
+	if not drawData.showBigMap then return end
+	if drawData.bigMapWasMoved then return end
+
+	local x, y = transformWorldToBigMapScreenView(drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2])
+	moveBigMap(-x + SCREEN_WIDTH / 2, -y + SCREEN_HEIGHT / 2)
 
 	return true
 end
@@ -1222,6 +1238,7 @@ local function drawBigMap()
 	drawData.bigMapDrawnSprites = {}
 
 	updateBigMapCursorMoving()
+	updateBigMapPlayerMoving()
 	updateBigMapScreenView()
 
 	drawBigMapTiles()
@@ -1240,17 +1257,14 @@ local function switchBigMap()
 
 	if drawData.showBigMap then
 
+		drawData.bigMapWasMoved = false
+
 		if BIGMAP_HIDE_CHAT then
 			drawData.bigMapSwitchChatWasVisible = isChatVisible()
 			if drawData.bigMapSwitchChatWasVisible then
 				showChat(false)
 			end
 		end
-
-		updateBigMapScreenView()
-		-- player position as center of map
-		local x, y = transformWorldToBigMapScreenView(drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2])
-		moveBigMap(-x + SCREEN_WIDTH / 2, -y + SCREEN_HEIGHT / 2)
 
 	else
 		if drawData.bigMapSwitchChatWasVisible then
@@ -1352,10 +1366,10 @@ addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCAL
 addCommandHandler(BIGMAP_ZOOM_OUT_COMMAND, function() zoomBigMap(-BIGMAP_ZOOM_SCALE_STEP) end)
 addCommandHandler(BIGMAP_OPACITY_UP_COMMAND, function() changeBigMapOpacity(BIGMAP_CHANGE_OPACITY_STEP) end)
 addCommandHandler(BIGMAP_OPACITY_DOWN_COMMAND, function() changeBigMapOpacity(-BIGMAP_CHANGE_OPACITY_STEP) end)
-addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function() moveBigMap(0, BIGMAP_MOVE_STEP) end)
-addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function() moveBigMap(0, -BIGMAP_MOVE_STEP) end)
-addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function() moveBigMap(BIGMAP_MOVE_STEP, 0) end)
-addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function() moveBigMap(-BIGMAP_MOVE_STEP, 0) end)
+addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(0, BIGMAP_MOVE_STEP) end)
+addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(0, -BIGMAP_MOVE_STEP) end)
+addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(BIGMAP_MOVE_STEP, 0) end)
+addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(-BIGMAP_MOVE_STEP, 0) end)
 
 addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
