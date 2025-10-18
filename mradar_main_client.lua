@@ -60,6 +60,7 @@ local ALTIMETER_SCREEN_X = ALTIMETER_BG_SCREEN_X + (ALTIMETER_BG_WIDTH / 2) - (A
 local ALTIMETER_WORLD_HEIGHT_MAX = 950
 local ALTIMETER_WORLD_HEIGHT_LOW = 200
 
+local RADAR_BLIP_COLOR_ENABLED = false
 local RADAR_BLIP_SIZE = RADAR_SIZE * 0.15
 local RADAR_BLIP_SIZE_GTASA_DEFAULT = 2
 local RADAR_BLIP_ALPHA_MULTIPLIER = 1
@@ -703,13 +704,26 @@ local function drawRadarSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 	end
 	if not texture then return false end
 
-	dxDrawImage(
-		RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size / 2),
-		math.floor(size), math.floor(size),
-		texture,
-		rot, 0, 0,
-		tocolor(r, g, b, a)
-	)
+	-- for CENTRE blip center is [0.5, 2/3]
+	if spriteId == RADAR_SPRITE.CENTRE then
+
+		dxDrawImage(
+			RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size * 2 / 3),
+			math.floor(size), math.floor(size),
+			texture,
+			rot, 0, size * 1 / 6,
+			tocolor(r, g, b, a)
+		)
+	else
+
+		dxDrawImage(
+			RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size / 2),
+			math.floor(size), math.floor(size),
+			texture,
+			rot, 0, 0,
+			tocolor(r, g, b, a)
+		)
+	end
 
 	return true
 end
@@ -728,9 +742,13 @@ local function drawRadarBlip(blip)
 		if dis > limit then return false end
 	end
 
+	local icon = getBlipIcon(blip)
 	local r, g, b, a = getBlipColor(blip)
+	if (not RADAR_BLIP_COLOR_ENABLED) and (icon ~= RADAR_SPRITE.NONE) then
+		r, g, b = 255, 255, 255
+	end
 
-	drawRadarSprite(getBlipIcon(blip), x, y, z, r, g, b, a, getBlipSize(blip));
+	drawRadarSprite(icon, x, y, z, r, g, b, a, getBlipSize(blip));
 
 	return true
 end
@@ -990,7 +1008,7 @@ local function drawBigMapSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 	end
 	if not texture then return false end
 
-	-- for MAP_HERE blip center is upper
+	-- for MAP_HERE blip center is [0.5, 0.0]
 	if spriteId == RADAR_SPRITE.MAP_HERE then
 
 		dxDrawImage(
@@ -1019,8 +1037,14 @@ end
 local function drawBigMapBlip(blip)
 
 	local x, y, z = getElementPosition(blip)
+
+	local icon = getBlipIcon(blip)
 	local r, g, b, a = getBlipColor(blip)
-	drawBigMapSprite(getBlipIcon(blip), x, y, z, r, g, b, a, getBlipSize(blip));
+	if (not RADAR_BLIP_COLOR_ENABLED) and (icon ~= RADAR_SPRITE.NONE) then
+		r, g, b = 255, 255, 255
+	end
+
+	drawBigMapSprite(icon, x, y, z, r, g, b, a, getBlipSize(blip));
 
 	return true
 end
