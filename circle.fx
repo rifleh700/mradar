@@ -1,0 +1,26 @@
+
+static float THRESHOLD = 0.005;
+
+float fInnerRadius = 0.0;
+float fOuterRadius = 0.5;
+
+struct PSInput {
+	float4 Diffuse : COLOR0;
+	float2 TexCoord : TEXCOORD0;
+};
+
+float4 PixelShaderFunction(PSInput PS) : COLOR {
+
+	float len = length(PS.TexCoord.xy - 0.5);
+
+	float ik = saturate((len - fInnerRadius + THRESHOLD) / THRESHOLD);
+    float ok = saturate((fOuterRadius - len) / THRESHOLD);
+
+	return float4(PS.Diffuse.rgb, PS.Diffuse.a * ik * ok);
+}
+
+technique circle {
+	pass P0 {
+		PixelShader = compile ps_2_0 PixelShaderFunction();
+	}
+}

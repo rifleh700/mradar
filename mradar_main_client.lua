@@ -31,13 +31,11 @@ local RADAR_BOTTOM_OFFSET = RADAR_SIZE / 4
 local RADAR_LEFT_OFFSET = RADAR_BOTTOM_OFFSET * (11 / 6)
 local RADAR_SCREEN_X = RADAR_LEFT_OFFSET
 local RADAR_SCREEN_Y = SCREEN_HEIGHT - RADAR_BOTTOM_OFFSET - RADAR_SIZE
--- TODO: drawing circle on RT instead of using texture? (bugged dxDrawCircle)
-local RADAR_BORDER_WIDTH = RADAR_SIZE_HALF / 8                                -- depends on radar disc texture
-local RADAR_BORDER_MARGIN = RADAR_BORDER_WIDTH / 8                            -- depends on radar disc texture
+local RADAR_BORDER_WIDTH = RADAR_SIZE_HALF / 10
 local RADAR_BORDER_COLOR = tocolor(0, 0, 0, 255)
 local RADAR_SPRITE_TEXTURES_PATH = TEXTURE_PATH .. "hud/"
 
-local RADAR_MAP_MASK_RADIUS = RADAR_SIZE_HALF - RADAR_BORDER_WIDTH + (RADAR_BORDER_MARGIN * 2)
+local RADAR_MAP_MASK_RADIUS = RADAR_SIZE_HALF - RADAR_BORDER_WIDTH + 1
 local RADAR_MAP_DRAW_TILES_RADIUS = 1
 local RADAR_MAP_MIN_RANGE = 180.0                                            -- Radar.cpp: RADAR_MIN_RANGE
 local RADAR_MAP_MAX_RANGE = 350.0                                            -- Radar.cpp: RADAR_MAX_RANGE
@@ -121,12 +119,11 @@ drawData.mapTileTextures = {}                    -- Radar.cpp: std::array<std::a
 drawData.hudSpriteTextures = {}                  -- Hud.h: CSprite2d (&Sprites)[6]
 drawData.radarSpriteTextures = {}                -- Radar.h: std::array<CSprite2d, MAX_RADAR_SPRITES>& RadarBlipSprites
 drawData.radarSpriteBlipTraceTextures = {}       -- custom textures (instead of drawing polygons)
-drawData.radarMaskTexture = nil
 
 drawData.areRenderTargetsReady = false
+drawData.radarCircleShader = dxCreateShader("circle.fx")
 drawData.radarMaskShader = dxCreateShader("radar.fx")
 drawData.radarMapMaskRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
-drawData.radarBorderRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 drawData.radarMapTilesRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 drawData.radarOverlayRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
 
@@ -252,6 +249,21 @@ function dxDrawTextWithShadow(text, x, y, rightX, bottomY, color, scaleXY, scale
 	dxDrawText(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 end
 
+local function dxDrawCircle(x, y, size, innerRadius, outerRadius, color)
+
+	dxSetShaderValue(drawData.radarCircleShader, "fInnerRadius", innerRadius / size)
+	dxSetShaderValue(drawData.radarCircleShader, "fOuterRadius", outerRadius / size)
+
+	return dxDrawImage(
+		x,
+		y,
+		size,
+		size,
+		drawData.radarCircleShader,
+		0, 0, 0,
+		color
+	)
+end
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -306,14 +318,6 @@ local function loadTextures()
 			)
 		end
 	end
-
-	-- custom texture
-	drawData.radarMaskTexture = dxCreateTexture(
-		RADAR_SPRITE_TEXTURES_PATH .. HUD_SPRITE_TEXTURE_NAMES[HUD_SPRITE.RADAR_DISC] .. "_mask" .. TEXTURE_FILE_FORMAT,
-		TEXTURE_QUALITY_FORMAT,
-		TEXTURE_MIPMAPS,
-		TEXTURE_EDGE
-	)
 
 	return true
 end
@@ -386,46 +390,15 @@ local function prepareRadarMaskRt()
 
 	dxSetRenderTarget(drawData.radarMapMaskRt, true)
 
-	local offset = RADAR_SIZE_HALF - RADAR_MAP_MASK_RADIUS
-	for y = 0, 1 do
-		for x = 0, 1 do
-			dxDrawImage(
-				offset + RADAR_MAP_MASK_RADIUS * x,
-				offset + RADAR_MAP_MASK_RADIUS * y,
-				RADAR_MAP_MASK_RADIUS,
-				RADAR_MAP_MASK_RADIUS,
-				drawData.radarMaskTexture,
-				(-2 * x * y + x - y) * 90, 0, 0
-			)
-		end
-	end
+	dxDrawCircle(
+		0,
+		0,
+		RADAR_SIZE,
+		0, RADAR_MAP_MASK_RADIUS,
+		tocolor(255, 255, 255, 255))
 
 	dxSetRenderTarget()
-
 	dxSetShaderValue(drawData.radarMaskShader, "sMaskTexture", drawData.radarMapMaskRt)
-
-	return true
-end
-
-local function prepareRadarBorderRt()
-
-	dxSetRenderTarget(drawData.radarBorderRt, true)
-	dxSetBlendMode("overwrite")
-	local texture = drawData.hudSpriteTextures[HUD_SPRITE.RADAR_DISC]
-	for y = 0, 1 do
-		for x = 0, 1 do
-			dxDrawImage(
-				RADAR_SIZE_HALF * x,
-				RADAR_SIZE_HALF * y,
-				RADAR_SIZE / 2,
-				RADAR_SIZE / 2,
-				texture,
-				(-2 * x * y + x - y) * 90, 0, 0
-			)
-		end
-	end
-	dxSetBlendMode("blend")
-	dxSetRenderTarget()
 
 	return true
 end
@@ -643,15 +616,13 @@ end
 
 local function drawRadarBorder()
 
-	dxDrawImage(
+	return dxDrawCircle(
 		RADAR_SCREEN_X, RADAR_SCREEN_Y,
-		RADAR_SIZE, RADAR_SIZE,
-		drawData.radarBorderRt,
-		0, 0, 0,
+		RADAR_SIZE,
+		RADAR_SIZE/2 - RADAR_BORDER_WIDTH,
+		RADAR_SIZE/2,
 		RADAR_BORDER_COLOR
 	)
-
-	return true
 end
 
 -- Radar.cpp: CRadar::LimitRadarPoint(CVector2D& point) // 0x5832F0
@@ -815,6 +786,8 @@ end
 -- Hud.cpp: CHud::DrawRadar() // 0x58A330
 local function drawRadar()
 
+	setPlayerHudComponentVisible("radar", false)
+
 	if not drawData.showRadar then return true end
 	if drawData.showBigMap then return true end
 
@@ -827,7 +800,6 @@ local function drawRadar()
 
 	if not drawData.areRenderTargetsReady then
 		prepareRadarMaskRt()
-		prepareRadarBorderRt()
 		drawData.areRenderTargetsReady = true
 	end
 
@@ -1366,10 +1338,22 @@ addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCAL
 addCommandHandler(BIGMAP_ZOOM_OUT_COMMAND, function() zoomBigMap(-BIGMAP_ZOOM_SCALE_STEP) end)
 addCommandHandler(BIGMAP_OPACITY_UP_COMMAND, function() changeBigMapOpacity(BIGMAP_CHANGE_OPACITY_STEP) end)
 addCommandHandler(BIGMAP_OPACITY_DOWN_COMMAND, function() changeBigMapOpacity(-BIGMAP_CHANGE_OPACITY_STEP) end)
-addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(0, BIGMAP_MOVE_STEP) end)
-addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(0, -BIGMAP_MOVE_STEP) end)
-addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(BIGMAP_MOVE_STEP, 0) end)
-addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function() drawData.bigMapWasMoved = true moveBigMap(-BIGMAP_MOVE_STEP, 0) end)
+addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function()
+	drawData.bigMapWasMoved = true
+	moveBigMap(0, BIGMAP_MOVE_STEP)
+end)
+addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function()
+	drawData.bigMapWasMoved = true
+	moveBigMap(0, -BIGMAP_MOVE_STEP)
+end)
+addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function()
+	drawData.bigMapWasMoved = true
+	moveBigMap(BIGMAP_MOVE_STEP, 0)
+end)
+addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function()
+	drawData.bigMapWasMoved = true
+	moveBigMap(-BIGMAP_MOVE_STEP, 0)
+end)
 
 addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)

@@ -153,7 +153,7 @@ HUD_SPRITE_TEXTURE_NAMES = {
 	--[HUD_SPRITE.FIST] 				= "fist",
 	--[HUD_SPRITE.SITE_M16] 			= "siteM16",
 	--[HUD_SPRITE.SITE_ROCKET] 		= "siterocket",
-	[HUD_SPRITE.RADAR_DISC] = "radardisc",
+	--[HUD_SPRITE.RADAR_DISC] = "radardisc",
 	[HUD_SPRITE.RADAR_RING_PLANE] = "radarRingPlane",
 	--[HUD_SPRITE.SKIP_ICON] 			= "SkipIcon"
 }
