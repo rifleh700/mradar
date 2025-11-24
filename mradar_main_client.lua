@@ -501,8 +501,8 @@ local function drawRadarArea(area)
 	if x + width < px - RADAR_MAP_MAX_RANGE then return false end
 	if y + height < py - RADAR_MAP_MAX_RANGE then return false end
 
-	local x1, y1 = transformWorldToRadarMapRtView(x, y)
-	local x2, y2 = transformWorldToRadarMapRtView(x + width, y + height)
+	local x1, y1 = transformWorldToRadarMapRtView(x, y + height)
+	local x2, y2 = transformWorldToRadarMapRtView(x + width, y)
 	local r, g, b, a = getRadarAreaColor(area)
 	if isRadarAreaFlashing(area) then
 		a = a * drawData.flashingRadarAreaAlphaMultiplier
