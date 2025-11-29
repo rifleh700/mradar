@@ -73,6 +73,7 @@ local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 local BIGMAP_CURSOR_ENABLED = false
 local BIGMAP_ATTACH_TO_PLAYER = true
 local BIGMAP_HIDE_CHAT = true
+local BIGMAP_POST_GUI = false
 local BIGMAP_SIZE = math.max(SCREEN_WIDTH, SCREEN_HEIGHT)
 local BIGMAP_ZOOM_SCALE_MAX = 4
 local BIGMAP_ZOOM_SCALE_MIN = 0.9
@@ -856,7 +857,7 @@ local function updateBigMapCursorMoving()
 	if not getKeyState(BIGMAP_MOVE_MOUSE_KEY) then return end
 	if guiGetInputEnabled() then return end
 	if isMTAWindowActive() then return end
-	if drawData.cursorOnGui then return end
+	if (not BIGMAP_POST_GUI) and drawData.cursorOnGui then return end
 
 	drawData.bigMapWasMoved = true
 
@@ -908,7 +909,8 @@ local function drawBigMapTiles()
 				size, size,
 				drawData.mapTileTextures[ty][tx],
 				0, 0, 0,
-				color
+				color,
+				BIGMAP_POST_GUI
 			)
 		end
 	end
@@ -920,7 +922,8 @@ local function drawBigMapTiles()
 		0, 0, 1, 1,
 		drawData.mapTileTextures[0][0],
 		0, 0, 0,
-		color
+		color,
+		BIGMAP_POST_GUI
 	)
 	dxDrawImageSection(
 		sx2, 0,
@@ -928,7 +931,8 @@ local function drawBigMapTiles()
 		0, 0, 1, 1,
 		drawData.mapTileTextures[0][0],
 		0, 0, 0,
-		color
+		color,
+		BIGMAP_POST_GUI
 	)
 	dxDrawImageSection(
 		sx1, 0,
@@ -936,7 +940,8 @@ local function drawBigMapTiles()
 		0, 0, 1, 1,
 		drawData.mapTileTextures[0][0],
 		0, 0, 0,
-		color
+		color,
+		BIGMAP_POST_GUI
 	)
 	dxDrawImageSection(
 		sx1, sy2,
@@ -944,7 +949,8 @@ local function drawBigMapTiles()
 		0, 0, 1, 1,
 		drawData.mapTileTextures[0][0],
 		0, 0, 0,
-		color
+		color,
+		BIGMAP_POST_GUI
 	)
 
 	return true
@@ -973,7 +979,7 @@ local function drawBigMapRadarArea(area)
 		x1, y1,
 		x2 - x1, y2 - y1,
 		tocolor(r, g, b, a),
-		false,
+		BIGMAP_POST_GUI,
 		true
 	)
 
@@ -1010,7 +1016,8 @@ local function drawBigMapSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 			size, size,
 			texture,
 			rot, 0, -size / 2,
-			tocolor(r, g, b, a)
+			tocolor(r, g, b, a),
+			BIGMAP_POST_GUI
 		)
 	else
 
@@ -1019,7 +1026,8 @@ local function drawBigMapSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 			size, size,
 			texture,
 			rot, 0, 0,
-			tocolor(r, g, b, a)
+			tocolor(r, g, b, a),
+			BIGMAP_POST_GUI
 		)
 	end
 
@@ -1111,7 +1119,7 @@ local function drawBigMapHelp()
 		bgX, bgY,
 		bgWidth, bgHeight,
 		BIGMAP_TEXT_WINDOW_BG_COLOR,
-		false,
+		BIGMAP_POST_GUI,
 		false
 	)
 
@@ -1124,7 +1132,12 @@ local function drawBigMapHelp()
 			x, y, nil, nil,
 			BIGMAP_HELP_TEXT_COLOR,
 			1, 1,
-			BIGMAP_HELP_TEXT_FONT
+			BIGMAP_HELP_TEXT_FONT,
+			nil,
+			nil,
+			nil,
+			nil,
+			BIGMAP_POST_GUI
 		)
 
 		x = x + actionTextWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2
@@ -1132,7 +1145,12 @@ local function drawBigMapHelp()
 			row[2], x, y, nil, nil,
 			BIGMAP_HELP_TEXT_COLOR,
 			1, 1,
-			BIGMAP_HELP_TEXT_FONT
+			BIGMAP_HELP_TEXT_FONT,
+			nil,
+			nil,
+			nil,
+			nil,
+			BIGMAP_POST_GUI
 		)
 	end
 
@@ -1182,7 +1200,7 @@ local function drawBigMapLegend()
 		bgX, bgY,
 		bgWidth, bgHeight,
 		BIGMAP_TEXT_WINDOW_BG_COLOR,
-		false,
+		BIGMAP_POST_GUI,
 		false
 	)
 
@@ -1199,11 +1217,23 @@ local function drawBigMapLegend()
 			iconSize, iconSize,
 			item[1],
 			0, 0, 0,
-			tocolor(255, 255, 255, 255)
+			tocolor(255, 255, 255, 255),
+			BIGMAP_POST_GUI
 		)
 
 		x = x + iconSize + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN
-		dxDrawTextWithShadow(item[2], x, y, nil, nil, BIGMAP_LEGEND_TEXT_COLOR, 1, 1, BIGMAP_LEGEND_TEXT_FONT)
+		dxDrawTextWithShadow(
+			item[2],
+			x, y,
+			nil, nil,
+			BIGMAP_LEGEND_TEXT_COLOR,
+			1, 1,
+			BIGMAP_LEGEND_TEXT_FONT,
+			nil,
+			nil,
+			nil,
+			nil,
+			BIGMAP_POST_GUI)
 	end
 
 	return true
@@ -1293,6 +1323,7 @@ local function zoomBigMap(step)
 
 	-- clamps offset
 	moveBigMap(0, 0)
+	updateBigMapScreenView()
 
 	return true
 end
