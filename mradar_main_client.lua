@@ -24,33 +24,38 @@ local MAP_TILE_COLOR = tocolor(255, 255, 255, 255)
 local MAP_TILE_INTERIOR_COLOR = tocolor(0, 0, 0, 0)
 local MAP_TILE_TEXTURES_PATH = TEXTURE_PATH .. "radar/"
 
--- Here are GTA:IV sizes
-local RADAR_SIZE = (math.min(SCREEN_WIDTH, SCREEN_HEIGHT)) / 5                -- WideScreenFix: 0.1875
-local RADAR_SIZE_HALF = RADAR_SIZE / 2
-local RADAR_BOTTOM_OFFSET = RADAR_SIZE / 4
+local RADAR_RECTANGLE = true
+local RADAR_HEIGHT = (math.min(SCREEN_WIDTH, SCREEN_HEIGHT)) * 0.2           -- WideScreenFix uses 0.1875 (too small I think)
+local RADAR_WIDTH = RADAR_RECTANGLE and RADAR_HEIGHT * (3 / 2) or RADAR_HEIGHT
+local RADAR_TILES_RT_SIZE = RADAR_RECTANGLE and getDistanceBetweenPoints2D(0, 0, RADAR_WIDTH, RADAR_HEIGHT) or RADAR_HEIGHT
+local RADAR_BOTTOM_OFFSET = RADAR_HEIGHT / 4
 local RADAR_LEFT_OFFSET = RADAR_BOTTOM_OFFSET * (11 / 6)
 local RADAR_SCREEN_X = RADAR_LEFT_OFFSET
-local RADAR_SCREEN_Y = SCREEN_HEIGHT - RADAR_BOTTOM_OFFSET - RADAR_SIZE
-local RADAR_BORDER_WIDTH = RADAR_SIZE_HALF / 10
+local RADAR_SCREEN_Y = SCREEN_HEIGHT - RADAR_BOTTOM_OFFSET - RADAR_HEIGHT
+local RADAR_COLOR = tocolor(255, 255, 255, 255)
+local RADAR_BORDER_WIDTH = RADAR_HEIGHT / 20
+local RADAR_BORDER_FADING = 2
 local RADAR_BORDER_COLOR = tocolor(0, 0, 0, 255)
 local RADAR_SPRITE_TEXTURES_PATH = TEXTURE_PATH .. "hud/"
 
-local RADAR_MAP_MASK_RADIUS = RADAR_SIZE_HALF - RADAR_BORDER_WIDTH + 1
-local RADAR_MAP_DRAW_TILES_RADIUS = 1
+local RADAR_MAP_MASK_OFFSET = RADAR_BORDER_WIDTH
+local RADAR_MAP_MASK_FADING = 2
+-- world radius (or height) of radar
 local RADAR_MAP_MIN_RANGE = 180.0                                            -- Radar.cpp: RADAR_MIN_RANGE
 local RADAR_MAP_MAX_RANGE = 350.0                                            -- Radar.cpp: RADAR_MAX_RANGE
 local RADAR_MAP_MIN_RANGE_SPEED = 0.3                                        -- Radar.cpp: RADAR_MIN_SPEED
 local RADAR_MAP_MAX_RANGE_SPEED = 0.9                                        -- Radar.cpp: RADAR_MAX_SPEED
+local RADAR_MAP_DRAW_TILES_RADIUS = math.ceil(RADAR_MAP_MAX_RANGE * (RADAR_TILES_RT_SIZE/RADAR_HEIGHT) / MAP_TILE_WORLD_SIZE)
 local RADAR_MAP_SHOW_IN_INTERIOR = false
 
-local RING_PLANE_SPRITE_COLOR = tocolor(255, 255, 255, 255)
+local RING_PLANE_SPRITE_SCALE = 0.8
 local ARTIFICIAL_HORIZON_SKY_COLOR = tocolor(0, 0, 0, 0)
 local ARTIFICIAL_HORIZON_GROUND_COLOR = tocolor(20, 175, 20, 200)
 local ALTIMETER_BG_COLOR = tocolor(10, 10, 10, 100)
-local ALTIMETER_BG_WIDTH = RADAR_SIZE / 16
-local ALTIMETER_BG_HEIGHT = RADAR_SIZE - (RADAR_BORDER_WIDTH * 2)
+local ALTIMETER_BG_WIDTH = RADAR_HEIGHT / 16
+local ALTIMETER_BG_HEIGHT = RADAR_HEIGHT - (RADAR_BORDER_WIDTH * 2)
 local ALTIMETER_BG_SCREEN_X = RADAR_SCREEN_X - (ALTIMETER_BG_WIDTH * 3)
-local ALTIMETER_BG_SCREEN_Y = RADAR_SCREEN_Y + (RADAR_SIZE / 2) - (ALTIMETER_BG_HEIGHT / 2)
+local ALTIMETER_BG_SCREEN_Y = RADAR_SCREEN_Y + (RADAR_HEIGHT - ALTIMETER_BG_HEIGHT) / 2
 local ALTIMETER_COLOR = tocolor(200, 200, 200, 255)
 local ALTIMETER_WIDTH = ALTIMETER_BG_WIDTH * 2
 local ALTIMETER_HEIGHT = ALTIMETER_WIDTH / 16
@@ -59,10 +64,10 @@ local ALTIMETER_WORLD_HEIGHT_MAX = 950
 local ALTIMETER_WORLD_HEIGHT_LOW = 200
 
 local RADAR_BLIP_COLOR_ENABLED = false
-local RADAR_BLIP_SIZE = RADAR_SIZE * 0.15
+local RADAR_BLIP_SIZE = RADAR_HEIGHT * 0.15
 local RADAR_BLIP_SIZE_GTASA_DEFAULT = 2
 local RADAR_BLIP_ALPHA_MULTIPLIER = 1
-local RADAR_BLIP_VECTOR_MAX_LENGTH = RADAR_SIZE_HALF - (RADAR_BORDER_WIDTH / 2)
+local RADAR_BLIP_VECTOR_OFFSET = RADAR_BORDER_WIDTH / 2
 local RADAR_BLIP_TRACE_TEXTURES_PATH = TEXTURE_PATH .. "trace/"
 local RADAR_BLIP_CENTRE_SIZE_MULTIPLIER = 0.9
 local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.5
@@ -123,10 +128,11 @@ drawData.radarSpriteBlipTraceTextures = {}       -- custom textures (instead of 
 
 drawData.areRenderTargetsReady = false
 drawData.radarCircleShader = dxCreateShader("circle.fx")
-drawData.radarMaskShader = dxCreateShader("radar.fx")
-drawData.radarMapMaskRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
-drawData.radarMapTilesRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
-drawData.radarOverlayRt = dxCreateRenderTarget(RADAR_SIZE, RADAR_SIZE, true)
+drawData.radarShader = dxCreateShader("radar.fx")
+drawData.radarMapTilesRt = dxCreateRenderTarget(RADAR_TILES_RT_SIZE, RADAR_TILES_RT_SIZE, true)
+drawData.radarArtificialHorizonRt = dxCreateRenderTarget(RADAR_WIDTH, RADAR_HEIGHT, true)
+drawData.radarMapMaskRt = dxCreateRenderTarget(RADAR_WIDTH, RADAR_HEIGHT, true, "a8") -- alpha only
+drawData.radarBorderRt = dxCreateRenderTarget(RADAR_WIDTH, RADAR_HEIGHT, true)
 
 drawData.cursorPrevPos = { 0, 0 }
 drawData.cursorCurrPos = { 0, 0 }
@@ -250,10 +256,20 @@ function dxDrawTextWithShadow(text, x, y, rightX, bottomY, color, scaleXY, scale
 	dxDrawText(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 end
 
-local function dxDrawCircle(x, y, size, innerRadius, outerRadius, color)
+local function dxDrawCircle(x, y, size, innerRadius, outerRadius, innerFading, outerFading, color)
+
+	innerRadius = innerRadius or 0
+	outerRadius = outerRadius or size / 2
+	innerFading = math.max(innerFading or 2, 2)
+	outerFading = math.max(outerFading or 2, 2)
+	color = color or tocolor(255, 255, 255, 255)
+
+	if innerRadius >= outerRadius then return false end
 
 	dxSetShaderValue(drawData.radarCircleShader, "fInnerRadius", innerRadius / size)
 	dxSetShaderValue(drawData.radarCircleShader, "fOuterRadius", outerRadius / size)
+	dxSetShaderValue(drawData.radarCircleShader, "fInnerFading", innerFading / size)
+	dxSetShaderValue(drawData.radarCircleShader, "fOuterFading", outerFading / size)
 
 	return dxDrawImage(
 		x,
@@ -264,6 +280,31 @@ local function dxDrawCircle(x, y, size, innerRadius, outerRadius, color)
 		0, 0, 0,
 		color
 	)
+end
+
+local function dxDrawRectangleBorder(x, y, width, height, border, color)
+
+	dxDrawRectangle(
+		x, y,
+		width, border,
+		color
+	)
+	dxDrawRectangle(
+		x, y + height - border,
+		width, border,
+		color
+	)
+	dxDrawRectangle(
+		x, y + border,
+		border, height - (border * 2),
+		color
+	)
+	dxDrawRectangle(
+		x + width - border, y + border,
+		border, height - (border * 2),
+		color
+	)
+	return true
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -390,16 +431,68 @@ end
 local function prepareRadarMaskRt()
 
 	dxSetRenderTarget(drawData.radarMapMaskRt, true)
+	dxSetBlendMode("overwrite")
 
-	dxDrawCircle(
-		0,
-		0,
-		RADAR_SIZE,
-		0, RADAR_MAP_MASK_RADIUS,
-		tocolor(255, 255, 255, 255))
+	if RADAR_RECTANGLE then
+
+		dxDrawRectangle(
+			RADAR_MAP_MASK_OFFSET,
+			RADAR_MAP_MASK_OFFSET,
+			RADAR_WIDTH - RADAR_MAP_MASK_OFFSET * 2,
+			RADAR_HEIGHT - RADAR_MAP_MASK_OFFSET * 2,
+			tocolor(255, 255, 255, 255)
+		)
+
+	else
+
+		dxDrawCircle(
+			0,
+			0,
+			RADAR_HEIGHT,
+			0,
+			RADAR_HEIGHT / 2 - RADAR_MAP_MASK_OFFSET,
+			0,
+			RADAR_MAP_MASK_FADING,
+			tocolor(255, 255, 255, 255))
+	end
 
 	dxSetRenderTarget()
-	dxSetShaderValue(drawData.radarMaskShader, "sMaskTexture", drawData.radarMapMaskRt)
+	dxSetBlendMode("blend")
+
+	dxSetShaderValue(drawData.radarShader, "gMaskTexture", drawData.radarMapMaskRt)
+
+	return true
+end
+
+local function prepareRadarBorderRt()
+
+	dxSetRenderTarget(drawData.radarBorderRt, true)
+	dxSetBlendMode("overwrite")
+
+	if RADAR_RECTANGLE then
+		dxDrawRectangleBorder(
+			0,
+			0,
+			RADAR_WIDTH,
+			RADAR_HEIGHT,
+			RADAR_BORDER_WIDTH,
+			RADAR_BORDER_COLOR)
+
+	else
+		dxDrawCircle(
+			0, 0,
+			RADAR_HEIGHT,
+			RADAR_HEIGHT / 2 - RADAR_BORDER_WIDTH,
+			RADAR_HEIGHT / 2,
+			RADAR_BORDER_FADING,
+			0,
+			RADAR_BORDER_COLOR)
+	end
+
+	dxSetRenderTarget()
+	dxSetBlendMode("blend")
+
+	dxSetShaderValue(drawData.radarShader, "gBorderTexture", drawData.radarBorderRt)
 
 	return true
 end
@@ -465,7 +558,7 @@ local function drawRadarMapTiles()
 	local x = math.floor((drawData.playerElementMatrix[4][1] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
 	local y = math.ceil(MAP_TILES_SIZE - 1 - (drawData.playerElementMatrix[4][2] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
 
-	dxSetRenderTarget(drawData.radarMapTilesRt)
+	dxSetRenderTarget(drawData.radarMapTilesRt, true)
 	dxSetBlendMode("modulate_add")
 
 	for dy = -RADAR_MAP_DRAW_TILES_RADIUS, RADAR_MAP_DRAW_TILES_RADIUS do
@@ -538,40 +631,28 @@ end
 
 local function drawArtificialHorizon()
 
-	if getElementType(drawData.playerElement) ~= "vehicle" then return false end
-	if getVehicleRealType(drawData.playerElement) ~= VEHICLE_REAL_TYPE.PLANE then return false end
+	dxSetRenderTarget(drawData.radarArtificialHorizonRt, true)
+	dxSetBlendMode("overwrite")
 
-	dxSetRenderTarget(drawData.radarOverlayRt)
-	dxSetBlendMode("modulate_add")
-
-	local pitch = math.atan2(-drawData.playerElementMatrix[2][3], drawData.playerElementMatrix[3][3]);
-	local horizon = RADAR_SIZE_HALF - (RADAR_SIZE_HALF * (pitch / math.pi))
 	dxDrawRectangle(
 		0, 0,
-		RADAR_SIZE, horizon,
+		RADAR_WIDTH, RADAR_HEIGHT / 2,
 		ARTIFICIAL_HORIZON_SKY_COLOR,
 		false,
 		true
 	)
 	dxDrawRectangle(
-		0, horizon,
-		RADAR_SIZE, RADAR_SIZE,
+		0, RADAR_HEIGHT / 2,
+		RADAR_WIDTH, RADAR_HEIGHT / 2,
 		ARTIFICIAL_HORIZON_GROUND_COLOR,
 		false,
 		true
 	)
 
-	local roll = math.atan2(-drawData.playerElementMatrix[1][3], drawData.playerElementMatrix[3][3])
-	dxDrawImage(
-		0, 0,
-		RADAR_SIZE, RADAR_SIZE,
-		drawData.hudSpriteTextures[HUD_SPRITE.RADAR_RING_PLANE],
-		math.deg(roll), 0, 0,
-		RING_PLANE_SPRITE_COLOR
-	)
-
-	dxSetBlendMode("blend")
 	dxSetRenderTarget()
+	dxSetBlendMode("blend")
+
+	dxSetShaderValue(drawData.radarShader, "gArtificialHorizonTexture", drawData.radarArtificialHorizonRt)
 
 	return true
 end
@@ -586,7 +667,9 @@ local function drawAltimeter()
 	dxDrawRectangle(
 		ALTIMETER_BG_SCREEN_X, ALTIMETER_BG_SCREEN_Y,
 		ALTIMETER_BG_WIDTH, ALTIMETER_BG_HEIGHT,
-		ALTIMETER_BG_COLOR
+		ALTIMETER_BG_COLOR,
+		false,
+		true
 	)
 
 	local height = drawData.playerElementMatrix[4][3]
@@ -608,27 +691,27 @@ local function drawAltimeter()
 	return true
 end
 
-local function drawRadarMaskShader()
+local function drawRadarShader()
 
-	dxSetShaderValue(drawData.radarMaskShader, "sMapTexture", drawData.radarMapTilesRt)
-	dxSetShaderValue(drawData.radarMaskShader, "sOverlayTexture", drawData.radarOverlayRt)
-	dxSetShaderValue(drawData.radarMaskShader, "sMaskTexture", drawData.radarMapMaskRt)
+	-- TODO: move scaling by speed into shader (?)
+	dxSetShaderValue(drawData.radarShader, "gTilesTexture", drawData.radarMapTilesRt)
+	dxSetShaderValue(drawData.radarShader, "gTilesRot", -drawData.playerCameraAngle)
 
-	dxSetShaderValue(drawData.radarMaskShader, "gUVRotAngle", -drawData.playerCameraAngle)
+	dxSetShaderValue(drawData.radarShader, "gPlane", drawData.playerInPlane)
+	if drawData.playerInPlane then
+		-- TODO: move matrix into shader (?)
+		dxSetShaderValue(drawData.radarShader, "gRingPlaneRot", math.atan2(drawData.playerElementMatrix[1][3], drawData.playerElementMatrix[3][3]))
+		dxSetShaderValue(drawData.radarShader, "gArtificialHorizonRatio", math.atan2(drawData.playerElementMatrix[2][3], drawData.playerElementMatrix[3][3]) / math.pi / 2)
+	end
 
-	dxDrawImage(RADAR_SCREEN_X, RADAR_SCREEN_Y, RADAR_SIZE, RADAR_SIZE, drawData.radarMaskShader)
-
-	return true
-end
-
-local function drawRadarBorder()
-
-	return dxDrawCircle(
-		RADAR_SCREEN_X, RADAR_SCREEN_Y,
-		RADAR_SIZE,
-		RADAR_SIZE/2 - RADAR_BORDER_WIDTH,
-		RADAR_SIZE/2,
-		RADAR_BORDER_COLOR
+	return dxDrawImage(
+		RADAR_SCREEN_X,
+		RADAR_SCREEN_Y,
+		RADAR_WIDTH,
+		RADAR_HEIGHT,
+		drawData.radarShader,
+		0, 0, 0,
+		RADAR_COLOR
 	)
 end
 
@@ -644,13 +727,39 @@ local function limitVectorLength(x1, y1, x2, y2, limit)
 	return x2, y2
 end
 
+local function limitVectorLengthRectangle(x1, y1, x2, y2, xl, yl)
+
+	local x = x2 - x1
+	local y = y2 - y1
+
+	local k = math.min(
+		math.min(1, math.abs(xl / x)),
+		math.min(1, math.abs(yl / y)))
+
+	return x * k + x1, y * k + y1
+end
+
 -- Radar.cpp: GetRadarAndScreenPos(float* radarPointDist)
 -- Radar.h: CachedRotateClockwise(const CVector2D& point)
 local function transformWorldToRadarMapBlipView(x, y)
 
 	x, y = getPositionFromMatrixOffset2D(drawData.radarMapRtRotView, x, y)
 
-	return limitVectorLength(RADAR_SIZE_HALF, RADAR_SIZE_HALF, x, y, RADAR_BLIP_VECTOR_MAX_LENGTH)
+	if RADAR_RECTANGLE then
+		return limitVectorLengthRectangle(
+			RADAR_WIDTH / 2,
+			RADAR_HEIGHT / 2,
+			x,
+			y,
+			RADAR_WIDTH / 2 - RADAR_BLIP_VECTOR_OFFSET,
+			RADAR_HEIGHT / 2 - RADAR_BLIP_VECTOR_OFFSET) end
+
+	return limitVectorLength(
+		RADAR_HEIGHT / 2,
+		RADAR_HEIGHT / 2,
+		x,
+		y,
+		RADAR_HEIGHT / 2 - RADAR_BLIP_VECTOR_OFFSET)
 end
 
 local function getRadarSpriteBlipTraceFromHeight(z)
@@ -771,21 +880,22 @@ local function updateRadarMapRtViews()
 
 	local worldToRtRelView = transform2.mul(
 		transform2.move(-drawData.playerElementMatrix[4][1], -drawData.playerElementMatrix[4][2]),
-		transform2.scale(1 / radarMapRange, 1 / radarMapRange))
-
-	local rtRelToRtAbsView = transform2.mul(transform2.mul(
-		transform2.scale(1, -1),
-		transform2.move(1, 1)),
-		transform2.scale(RADAR_SIZE_HALF, RADAR_SIZE_HALF))
+		transform2.scale(1 / radarMapRange, -1 / radarMapRange))
 
 	drawData.radarMapRtView = transform2.mul(
 		worldToRtRelView,
-		rtRelToRtAbsView)
+		transform2.mul(transform2.mul(
+			transform2.move(1, 1),
+			transform2.scale(RADAR_HEIGHT / 2, RADAR_HEIGHT / 2)),
+			transform2.move((RADAR_TILES_RT_SIZE - RADAR_HEIGHT) / 2, (RADAR_TILES_RT_SIZE - RADAR_HEIGHT) / 2)))
 
 	drawData.radarMapRtRotView = transform2.mul(transform2.mul(
 		worldToRtRelView,
-		transform2.rotate(-drawData.playerCameraAngle)),
-		rtRelToRtAbsView)
+		transform2.rotate(drawData.playerCameraAngle)),
+		transform2.mul(transform2.mul(
+			transform2.move(1, 1),
+			transform2.scale(RADAR_HEIGHT / 2, RADAR_HEIGHT / 2)),
+			transform2.move((RADAR_WIDTH - RADAR_HEIGHT) / 2, 0)))
 
 	return true
 end
@@ -800,22 +910,20 @@ local function drawRadar()
 
 	updateRadarMapRtViews()
 
-	-- reset RT
-	dxSetRenderTarget(drawData.radarMapTilesRt, true)
-	dxSetRenderTarget(drawData.radarOverlayRt, true)
-	dxSetRenderTarget()
-
 	if not drawData.areRenderTargetsReady then
 		prepareRadarMaskRt()
+		prepareRadarBorderRt()
+		drawArtificialHorizon()
+		dxSetShaderValue(drawData.radarShader, "gTilesScale", RADAR_WIDTH / RADAR_TILES_RT_SIZE, RADAR_HEIGHT / RADAR_TILES_RT_SIZE)
+		dxSetShaderValue(drawData.radarShader, "gRingPlaneTexture", drawData.hudSpriteTextures[HUD_SPRITE.RADAR_RING_PLANE])
+		dxSetShaderValue(drawData.radarShader, "gRingPlaneScale", 1 / RING_PLANE_SPRITE_SCALE)
 		drawData.areRenderTargetsReady = true
 	end
 
 	drawRadarMapTiles()
 	drawRadarAreas()
-	drawArtificialHorizon()
 	drawAltimeter()
-	drawRadarMaskShader()
-	drawRadarBorder()
+	drawRadarShader()
 	drawRadarBlips()
 
 	return true
@@ -1349,6 +1457,9 @@ local function draw()
 	drawData.playerInterior = getElementInterior(localPlayer)
 	drawData.playerDimension = getElementDimension(localPlayer)
 	drawData.flashingRadarAreaAlphaMultiplier = calcFlashingRadarAreaAlphaMultiplier()
+
+	drawData.playerInPlane = getElementType(drawData.playerElement) == "vehicle" and
+		getVehicleRealType(drawData.playerElement) == VEHICLE_REAL_TYPE.PLANE
 
 	drawRadar()
 	drawBigMap()

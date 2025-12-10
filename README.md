@@ -8,6 +8,7 @@ Reengineered original GTA:SA radar for MTA:SA
 - original textures set format
 - modify-friendly
 - no scaling-bugs
+- optional rectangle radar
 - new F11 map
 - map legend
 - map cursor moving
@@ -15,6 +16,7 @@ Reengineered original GTA:SA radar for MTA:SA
 ## Settings
 You can configure radar with predefined global Lua variables. See `mradar_main_client.lua` script file. Some of important setting see below
 - `RADAR_BLIP_COLOR_ENABLED` (**default is `false`**) - enables blips painting (usually blips have red or black color, u should always define blips color when this feature is enabled) 
+- `RADAR_RECTANGLE` (**default is `false`**) - enables rectangle radar (instead of circle)
 - `BIGMAP_CURSOR_ENABLED` (**default is `false`**) - enables cursor when big map (F11) is visible
 - `BIGMAP_POST_GUI` (**defaults is `false`**) - enables big map "post-gui" drawing
 
@@ -29,3 +31,4 @@ You can configure radar with predefined global Lua variables. See `mradar_main_c
 ![screenshot3](https://i.imgur.com/PESLkec.png)
 ![screenshot4](https://i.imgur.com/09Sj79X.png)
 ![screenshot5](https://i.imgur.com/Kk9vmvK.jpeg)
+![screenshot6](https://i.imgur.com/Fbv28ue.jpeg)
