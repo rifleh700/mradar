@@ -24,7 +24,7 @@ local MAP_TILE_COLOR = tocolor(255, 255, 255, 255)
 local MAP_TILE_INTERIOR_COLOR = tocolor(0, 0, 0, 0)
 local MAP_TILE_TEXTURES_PATH = TEXTURE_PATH .. "radar/"
 
-local RADAR_RECTANGLE = true
+local RADAR_RECTANGLE = false
 local RADAR_HEIGHT = (math.min(SCREEN_WIDTH, SCREEN_HEIGHT)) * 0.2           -- WideScreenFix uses 0.1875 (too small I think)
 local RADAR_WIDTH = RADAR_RECTANGLE and RADAR_HEIGHT * (3 / 2) or RADAR_HEIGHT
 local RADAR_TILES_RT_SIZE = RADAR_RECTANGLE and getDistanceBetweenPoints2D(0, 0, RADAR_WIDTH, RADAR_HEIGHT) or RADAR_HEIGHT
