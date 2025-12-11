@@ -364,6 +364,38 @@ local function loadTextures()
 	return true
 end
 
+local function destroyTextures()
+
+	for id, texture in pairs(drawData.radarSpriteTextures) do
+		if isElement(texture) then destroyElement(texture) end
+		drawData.radarSpriteTextures[id] = nil
+	end
+
+	for id, texture in pairs(drawData.radarSpriteBlipTraceTextures) do
+		if isElement(texture) then destroyElement(texture) end
+		drawData.radarSpriteBlipTraceTextures[id] = nil
+	end
+
+	for id, texture in pairs(drawData.hudSpriteTextures) do
+		if isElement(texture) then destroyElement(texture) end
+		drawData.hudSpriteTextures[id] = nil
+	end
+
+	for y = 0, MAP_TILES_SIZE - 1 do
+		if drawData.mapTileTextures[y] then
+			for x = 0, MAP_TILES_SIZE - 1 do
+				if isElement(drawData.mapTileTextures[y][x]) then
+					destroyElement(drawData.mapTileTextures[y][x])
+				end
+				drawData.mapTileTextures[y][x] = nil
+			end
+			drawData.mapTileTextures[y] = nil
+		end
+	end
+
+	return true
+end
+
 -- Radar.cpp: CRadar::Initialise() // 0x587FB0
 local function init()
 
@@ -397,6 +429,23 @@ local function term()
 	toggleControl("radar_opacity_down", true)
 	toggleControl("radar_opacity_up", true)
 	toggleControl("radar_help", true)
+
+	-- Destroy textures
+	destroyTextures()
+
+	-- Destroy shaders
+	if isElement(drawData.radarCircleShader) then destroyElement(drawData.radarCircleShader) end
+	if isElement(drawData.radarShader) then destroyElement(drawData.radarShader) end
+
+	-- Destroy render targets
+	if isElement(drawData.radarMapTilesRt) then destroyElement(drawData.radarMapTilesRt) end
+	if isElement(drawData.radarArtificialHorizonRt) then destroyElement(drawData.radarArtificialHorizonRt) end
+	if isElement(drawData.radarMapMaskRt) then destroyElement(drawData.radarMapMaskRt) end
+	if isElement(drawData.radarBorderRt) then destroyElement(drawData.radarBorderRt) end
+
+	-- Destroy fonts
+	if isElement(BIGMAP_HELP_TEXT_FONT) then destroyElement(BIGMAP_HELP_TEXT_FONT) end
+	if isElement(BIGMAP_LEGEND_TEXT_FONT) then destroyElement(BIGMAP_LEGEND_TEXT_FONT) end
 
 	return true
 end
