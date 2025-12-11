@@ -732,9 +732,10 @@ local function limitVectorLengthRectangle(x1, y1, x2, y2, xl, yl)
 	local x = x2 - x1
 	local y = y2 - y1
 
-	local k = math.min(
-		math.min(1, math.abs(xl / x)),
-		math.min(1, math.abs(yl / y)))
+	-- Avoid division by zero when vector components are zero
+	local kx = (x ~= 0) and math.min(1, math.abs(xl / x)) or 1
+	local ky = (y ~= 0) and math.min(1, math.abs(yl / y)) or 1
+	local k = math.min(kx, ky)
 
 	return x * k + x1, y * k + y1
 end
