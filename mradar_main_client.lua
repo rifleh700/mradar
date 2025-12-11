@@ -45,7 +45,7 @@ local RADAR_MAP_MIN_RANGE = 180.0                                            -- 
 local RADAR_MAP_MAX_RANGE = 350.0                                            -- Radar.cpp: RADAR_MAX_RANGE
 local RADAR_MAP_MIN_RANGE_SPEED = 0.3                                        -- Radar.cpp: RADAR_MIN_SPEED
 local RADAR_MAP_MAX_RANGE_SPEED = 0.9                                        -- Radar.cpp: RADAR_MAX_SPEED
-local RADAR_MAP_DRAW_TILES_RADIUS = math.ceil(RADAR_MAP_MAX_RANGE * (RADAR_TILES_RT_SIZE/RADAR_HEIGHT) / MAP_TILE_WORLD_SIZE)
+local RADAR_MAP_DRAW_TILES_RADIUS = math.ceil(RADAR_MAP_MAX_RANGE * (RADAR_TILES_RT_SIZE / RADAR_HEIGHT) / MAP_TILE_WORLD_SIZE)
 local RADAR_MAP_SHOW_IN_INTERIOR = false
 
 local RING_PLANE_SPRITE_SCALE = 0.8
@@ -163,6 +163,16 @@ drawData.bigMapScreenViewResult = transform2.move(0, 0)
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 
+local math_sqrt = math.sqrt
+local math_floor = math.floor
+local math_abs = math.abs
+
+local getElementPosition = getElementPosition
+local getElementDimension = getElementDimension
+local getElementInterior = getElementInterior
+local dxDrawImage = dxDrawImage
+local dxDrawRectangle = dxDrawRectangle
+local tocolor = tocolor
 
 local function math_clamp(value, min, max)
 
@@ -196,7 +206,7 @@ local function getDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2)
 	local dy = y2 - y1
 	local dz = z2 - z1
 
-	return math.sqrt(dx * dx + dy * dy + dz * dz)
+	return math_sqrt(dx * dx + dy * dy + dz * dz)
 end
 
 local function getDistanceBetweenPoints2D(x1, y1, x2, y2)
@@ -204,7 +214,7 @@ local function getDistanceBetweenPoints2D(x1, y1, x2, y2)
 	local dx = x2 - x1
 	local dy = y2 - y1
 
-	return math.sqrt(dx * dx + dy * dy)
+	return math_sqrt(dx * dx + dy * dy)
 end
 
 local function getCursorAbsolutePosition()
@@ -223,7 +233,19 @@ local function getVehicleRealType(vehicle)
 	return getVehicleType(vehicle)
 end
 
-local function getBlipsByInteriorDimensionOrdered(int, dim)
+local function isBlipVisible(blip, x, y, int, dim)
+
+	local bx, by, bz = getElementPosition(blip)
+	local dis = getBlipVisibleDistance(blip)
+	if math_abs(bx - x) > dis then return false end
+	if math_abs(by - y) > dis then return false end
+	if getElementInterior(blip) ~= int then return false end
+	if getElementDimension(blip) ~= dim then return false end
+	if getDistanceBetweenPoints2D(x, y, bx, by) > dis then return false end
+	return true
+end
+
+local function getBlipsByPositionInteriorDimensionOrdered(x, y, int, dim)
 
 	local orderings = {}
 	local blips = {}
@@ -231,7 +253,7 @@ local function getBlipsByInteriorDimensionOrdered(int, dim)
 
 	for _, blip in ipairs(getElementsByType("blip")) do
 
-		if getElementInterior(blip) == int and getElementDimension(blip) == dim then
+		if isBlipVisible(blip, x, y, int, dim) then
 
 			number = number + 1
 			blips[number] = blip
@@ -248,10 +270,10 @@ end
 
 function dxDrawTextWithShadow(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 
-	x = math.floor(x)
-	y = math.floor(y)
+	x = math_floor(x)
+	y = math_floor(y)
 
-	local off = math.floor(dxGetFontHeight(scaleY or scaleXY, font) / 1.75 / 6)
+	local off = math_floor(dxGetFontHeight(scaleY or scaleXY, font) / 1.75 / 6)
 	dxDrawText(text, x + off, y + off, rightX, bottomY, tocolor(0, 0, 0, 255), scaleXY, scaleY, font, ...)
 	dxDrawText(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
 end
@@ -555,7 +577,7 @@ end
 
 local function drawRadarMapTiles()
 
-	local x = math.floor((drawData.playerElementMatrix[4][1] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
+	local x = math_floor((drawData.playerElementMatrix[4][1] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
 	local y = math.ceil(MAP_TILES_SIZE - 1 - (drawData.playerElementMatrix[4][2] + MAP_WORLD_SIZE_HALF) / MAP_TILE_WORLD_SIZE)
 
 	dxSetRenderTarget(drawData.radarMapTilesRt, true)
@@ -580,20 +602,20 @@ end
 
 local function drawRadarArea(area)
 
+	local x, y, _ = getElementPosition(area)
+	local px, py = drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2]
+	if x > px + drawData.radarMapRange then return false end
+	if y > py + drawData.radarMapRange then return false end
+
+	local width, height = getRadarAreaSize(area)
+	if x + width < px - drawData.radarMapRange then return false end
+	if y + height < py - drawData.radarMapRange then return false end
+
 	local dim = getElementDimension(area)
 	if dim ~= drawData.playerDimension then return false end
 
 	local int = getElementInterior(area)
 	if int ~= drawData.playerInterior then return false end
-
-	local x, y, _ = getElementPosition(area)
-	local px, py = drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2]
-	if x > px + RADAR_MAP_MAX_RANGE then return false end
-	if y > py + RADAR_MAP_MAX_RANGE then return false end
-
-	local width, height = getRadarAreaSize(area)
-	if x + width < px - RADAR_MAP_MAX_RANGE then return false end
-	if y + height < py - RADAR_MAP_MAX_RANGE then return false end
 
 	local x1, y1 = transformWorldToRadarMapRtView(x, y + height)
 	local x2, y2 = transformWorldToRadarMapRtView(x + width, y)
@@ -798,7 +820,7 @@ local function drawRadarSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 
 		dxDrawImage(
 			RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size * 2 / 3),
-			math.floor(size), math.floor(size),
+			math_floor(size), math_floor(size),
 			texture,
 			rot, 0, size * 1 / 6,
 			tocolor(r, g, b, a)
@@ -807,7 +829,7 @@ local function drawRadarSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 
 		dxDrawImage(
 			RADAR_SCREEN_X + x - (size / 2), RADAR_SCREEN_Y + y - (size / 2),
-			math.floor(size), math.floor(size),
+			math_floor(size), math_floor(size),
 			texture,
 			rot, 0, 0,
 			tocolor(r, g, b, a)
@@ -821,16 +843,6 @@ end
 local function drawRadarBlip(blip)
 
 	local x, y, z = getElementPosition(blip)
-	local limit = getBlipVisibleDistance(blip)
-
-	if limit <= 0 then return false end
-	if limit < MAP_WORLD_SIZE then
-		local dis = getDistanceBetweenPoints2D(
-			drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2],
-			x, y)
-		if dis > limit then return false end
-	end
-
 	local icon = getBlipIcon(blip)
 	local r, g, b, a = getBlipColor(blip)
 	if (not RADAR_BLIP_COLOR_ENABLED) and (icon ~= RADAR_SPRITE.NONE) then
@@ -853,11 +865,16 @@ local function drawRadarBlips()
 		255, 255, 255, 255,
 		RADAR_BLIP_SIZE_GTASA_DEFAULT)
 
-	for _, blip in ipairs(getBlipsByInteriorDimensionOrdered(drawData.playerInterior, drawData.playerDimension)) do
+	for _, blip in ipairs(getBlipsByPositionInteriorDimensionOrdered(
+		drawData.playerElementMatrix[4][1],
+		drawData.playerElementMatrix[4][2],
+		drawData.playerInterior,
+		drawData.playerDimension)) do
+
 		drawRadarBlip(blip)
 	end
 
-	if not (getElementType(drawData.playerElement) == "vehicle" and getVehicleRealType(drawData.playerElement) == VEHICLE_REAL_TYPE.PLANE) then
+	if not drawData.playerInPlane then
 
 		drawRadarSprite(
 			RADAR_SPRITE.CENTRE,
@@ -876,11 +893,11 @@ end
 local function updateRadarMapRtViews()
 
 	-- Radar.h: float& m_radarRange (radar world radius)
-	local radarMapRange = calcRadarMapRange(drawData.playerElement, drawData.playerElementMatrix)
+	drawData.radarMapRange = calcRadarMapRange(drawData.playerElement, drawData.playerElementMatrix)
 
 	local worldToRtRelView = transform2.mul(
 		transform2.move(-drawData.playerElementMatrix[4][1], -drawData.playerElementMatrix[4][2]),
-		transform2.scale(1 / radarMapRange, -1 / radarMapRange))
+		transform2.scale(1 / drawData.radarMapRange, -1 / drawData.radarMapRange))
 
 	drawData.radarMapRtView = transform2.mul(
 		worldToRtRelView,
@@ -1161,8 +1178,11 @@ end
 
 local function drawBigMapBlips()
 
-	for _, blip in ipairs(getBlipsByInteriorDimensionOrdered(drawData.playerInterior, drawData.playerDimension)) do
-		drawBigMapBlip(blip)
+	--TODO: need sort by ordering?
+	for _, blip in ipairs(getElementsByType("blip")) do
+		if getElementInterior(blip) == drawData.playerInterior and getElementDimension(blip) == drawData.playerDimension then
+			drawBigMapBlip(blip)
+		end
 	end
 
 	drawBigMapSprite(
@@ -1218,10 +1238,10 @@ local function drawBigMapHelp()
 	end
 
 	local textHeight = dxGetFontHeight(1, BIGMAP_HELP_TEXT_FONT)
-	local bgWidth = math.floor(actionTextWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2 + keysTextWidth + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
-	local bgHeight = math.floor(textHeight * #rows + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
-	local bgX = math.floor((SCREEN_WIDTH - bgWidth) / 2)
-	local bgY = math.floor(SCREEN_HEIGHT - bgHeight - BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
+	local bgWidth = math_floor(actionTextWidth + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2 + keysTextWidth + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgHeight = math_floor(textHeight * #rows + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgX = math_floor((SCREEN_WIDTH - bgWidth) / 2)
+	local bgY = math_floor(SCREEN_HEIGHT - bgHeight - BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
 
 	dxDrawRectangle(
 		bgX, bgY,
@@ -1299,10 +1319,10 @@ local function drawBigMapLegend()
 	local iconSize = textHeight
 	local itemWidth = iconSize + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN + textWidth
 
-	local bgWidth = math.floor((columns * itemWidth) + (columns * BIGMAP_TEXT_WINDOW_CONTENT_MARGIN) + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
-	local bgHeight = math.floor(itemHeight * math.ceil(#items / columns) + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
-	local bgX = math.floor((SCREEN_WIDTH - bgWidth) / 2)
-	local bgY = math.min(bgX, math.floor((SCREEN_HEIGHT - bgHeight) / 2))
+	local bgWidth = math_floor((columns * itemWidth) + (columns * BIGMAP_TEXT_WINDOW_CONTENT_MARGIN) + BIGMAP_TEXT_WINDOW_CONTENT_MARGIN)
+	local bgHeight = math_floor(itemHeight * math.ceil(#items / columns) + (BIGMAP_TEXT_WINDOW_CONTENT_MARGIN * 2))
+	local bgX = math_floor((SCREEN_WIDTH - bgWidth) / 2)
+	local bgY = math.min(bgX, math_floor((SCREEN_HEIGHT - bgHeight) / 2))
 
 	dxDrawRectangle(
 		bgX, bgY,
