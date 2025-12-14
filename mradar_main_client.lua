@@ -75,7 +75,7 @@ local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
 -- F11 map
-local BIGMAP_CURSOR_ENABLED = false
+local BIGMAP_CURSOR_ENABLED_DEFAULT = false
 local BIGMAP_ATTACH_TO_PLAYER = true
 local BIGMAP_HIDE_CHAT = true
 local BIGMAP_POST_GUI = false
@@ -111,7 +111,10 @@ local BIGMAP_MOVE_EAST_COMMAND = "radar_move_east"
 local BIGMAP_MOVE_WEST_COMMAND = "radar_move_west"
 local BIGMAP_SWITCH_HELP_COMMAND = "radar_help"
 local BIGMAP_SWITCH_LEGEND_KEY = "l"
+local BIGMAP_SWITCH_CURSOR_KEY = "mouse3"
 local BIGMAP_MOVE_MOUSE_KEY = "mouse1"
+local BIGMAP_SET_WAYPOINT_KEY = "mouse2"
+local BIGMAP_WAYPOINT_REMOVE_DISTANCE = 50
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -157,6 +160,9 @@ drawData.bigMapAlphaMultiplier = BIGMAP_OPACITY_DEFAULT
 drawData.bigMapDrawnSprites = {}
 drawData.bigMapScreenViewTransform = transform2.scale(BIGMAP_ZOOM_SCALE_DEFAULT, BIGMAP_ZOOM_SCALE_DEFAULT)
 drawData.bigMapScreenViewResult = transform2.move(0, 0)
+drawData.bigMapCursorEnabled = BIGMAP_CURSOR_ENABLED_DEFAULT
+
+drawData.waypointBlip = nil
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -951,6 +957,14 @@ local function transformWorldToBigMapScreenView(x, y)
 	return getPositionFromMatrixOffset2D(drawData.bigMapScreenViewResult, x, y)
 end
 
+local function transformBigMapScreenToWorld(screenX, screenY)
+
+	local invMatrix = transform2.invert(drawData.bigMapScreenViewResult)
+	if not invMatrix then return nil, nil end
+
+	return getPositionFromMatrixOffset2D(invMatrix, screenX, screenY)
+end
+
 local function moveBigMap(x, y)
 
 	drawData.bigMapScreenViewTransform = transform2.mul(
@@ -976,7 +990,7 @@ end
 
 local function updateBigMapCursorMoving()
 
-	if not BIGMAP_CURSOR_ENABLED then return end
+	if not drawData.bigMapCursorEnabled then return end
 	if not drawData.showBigMap then return end
 	if not isCursorShowing() then return end
 	if not getKeyState(BIGMAP_MOVE_MOUSE_KEY) then return end
@@ -1223,8 +1237,10 @@ local function drawBigMapHelp()
 	local rows = {
 		{ "help", table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
 		{ "legend", BIGMAP_SWITCH_LEGEND_KEY },
+		{ "cursor", BIGMAP_SWITCH_CURSOR_KEY },
+		{ "waypoint", BIGMAP_SET_WAYPOINT_KEY .. " (cursor)" },
 		{ "zoom", table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
-		{ "move", (BIGMAP_CURSOR_ENABLED and "mouse1 / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
+		{ "move", (drawData.bigMapCursorEnabled and "mouse1 / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
 		{ "opacity", table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
 	}
 
@@ -1389,7 +1405,7 @@ end
 local function switchBigMap()
 
 	drawData.showBigMap = not drawData.showBigMap
-	showCursor(BIGMAP_CURSOR_ENABLED and drawData.showBigMap)
+	showCursor(drawData.bigMapCursorEnabled and drawData.showBigMap)
 
 	if drawData.showBigMap then
 
@@ -1426,6 +1442,49 @@ local function switchBigMapLegend()
 	drawData.showBigMapLegend = not drawData.showBigMapLegend
 
 	return drawData.showBigMapLegend
+end
+
+local function switchBigMapCursor()
+
+	if not drawData.showBigMap then return false end
+
+	drawData.bigMapCursorEnabled = not drawData.bigMapCursorEnabled
+	showCursor(drawData.bigMapCursorEnabled)
+
+	return drawData.bigMapCursorEnabled
+end
+
+local function bigMapSetWaypoint()
+
+	if not drawData.showBigMap then return end
+	if not isCursorShowing() then return end
+	if guiGetInputEnabled() then return end
+	if isMTAWindowActive() then return end
+	if (not BIGMAP_POST_GUI) and drawData.cursorOnGui then return end
+
+	local screenX, screenY = getCursorAbsolutePosition()
+	if not screenX then return end
+
+	local worldX, worldY = transformBigMapScreenToWorld(screenX, screenY)
+	if not worldX then return end
+
+	-- If waypoint exists and click is near it, remove it
+	if drawData.waypointBlip and isElement(drawData.waypointBlip) then
+		local wpX, wpY = getElementPosition(drawData.waypointBlip)
+		local dist = getDistanceBetweenPoints2D(worldX, worldY, wpX, wpY)
+		if dist < BIGMAP_WAYPOINT_REMOVE_DISTANCE then
+			destroyElement(drawData.waypointBlip)
+			drawData.waypointBlip = nil
+			return
+		end
+	end
+
+	-- Set new waypoint
+	if drawData.waypointBlip and isElement(drawData.waypointBlip) then
+		destroyElement(drawData.waypointBlip)
+	end
+	drawData.waypointBlip = createBlip(worldX, worldY, 0, RADAR_SPRITE.WAYPOINT)
+	setBlipVisibleDistance(drawData.waypointBlip, MAP_WORLD_SIZE)
 end
 
 local function zoomBigMap(step)
@@ -1500,6 +1559,7 @@ addEventHandler("onClientRestore", root, function() drawData.areRenderTargetsRea
 addEventHandler("onClientRender", root, draw)
 
 bindKey(BIGMAP_SWITCH_LEGEND_KEY, "down", switchBigMapLegend)
+bindKey(BIGMAP_SWITCH_CURSOR_KEY, "down", switchBigMapCursor)
 addCommandHandler(BIGMAP_SWITCH_COMMAND, switchBigMap)
 addCommandHandler(BIGMAP_SWITCH_HELP_COMMAND, switchBigMapHelp)
 addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCALE_STEP) end)
@@ -1526,6 +1586,7 @@ end)
 addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseLeave", root, function(_, _, enteredGui) drawData.cursorOnGui = enteredGui ~= nil end)
+bindKey(BIGMAP_SET_WAYPOINT_KEY, "up", bigMapSetWaypoint)
 
 
 ------------------------------------------------------------------------------------------------------------------------
