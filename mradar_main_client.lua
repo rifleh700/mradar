@@ -75,9 +75,9 @@ local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
 -- F11 map
-local BIGMAP_CURSOR_ENABLED_DEFAULT = false
+local BIGMAP_CURSOR_ENABLED = false
 local BIGMAP_CURSOR_SWITCHABLE = true
-local BIGMAP_WAYPOINT_ENABLED = BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED_DEFAULT
+local BIGMAP_WAYPOINT_ENABLED = BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED
 local BIGMAP_ATTACH_TO_PLAYER = true
 local BIGMAP_HIDE_CHAT = true
 local BIGMAP_POST_GUI = false
@@ -90,6 +90,11 @@ local BIGMAP_CHANGE_OPACITY_STEP = 0.05
 local BIGMAP_OPACITY_DEFAULT = 0.6
 local BIGMAP_MOVE_STEP = math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 20
 local BIGMAP_BLIP_HERE_SIZE = 6
+local BIGMAP_SOUND_ENABLED = false
+local BIGMAP_SHOW_SOUND_ID = 1
+local BIGMAP_HIDE_SOUND_ID = 2
+local BIGMAP_SET_WAYPOINT_SOUND_ID = 1
+local BIGMAP_REMOVE_WAYPOINT_SOUND_ID = 2
 
 local BIGMAP_TEXT_WINDOW_BG_COLOR = tocolor(0, 0, 0, 190)
 local BIGMAP_TEXT_WINDOW_CONTENT_MARGIN = 10
@@ -164,7 +169,7 @@ drawData.bigMapAlphaMultiplier = BIGMAP_OPACITY_DEFAULT
 drawData.bigMapDrawnSprites = {}
 drawData.bigMapScreenViewTransform = transform2.scale(BIGMAP_ZOOM_SCALE_DEFAULT, BIGMAP_ZOOM_SCALE_DEFAULT)
 drawData.bigMapScreenViewResult = transform2.move(0, 0)
-drawData.bigMapCursorEnabled = BIGMAP_CURSOR_ENABLED_DEFAULT
+drawData.bigMapCursorEnabled = BIGMAP_CURSOR_ENABLED
 
 drawData.waypointBlip = nil
 
@@ -1224,7 +1229,7 @@ local function drawBigMapHelp()
 		{ "help", table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
 		{ "legend", BIGMAP_SWITCH_LEGEND_KEY },
 		{ "zoom", table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
-		{ "move", ((BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED_DEFAULT) and BIGMAP_MOVE_MOUSE_KEY .. " / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
+		{ "move", ((BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED) and BIGMAP_MOVE_MOUSE_KEY .. " / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
 		{ "opacity", table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
 	}
 	if BIGMAP_CURSOR_SWITCHABLE then rows[#rows + 1] = { "cursor", BIGMAP_SWITCH_CURSOR_KEY } end
@@ -1399,6 +1404,8 @@ local function switchBigMap()
 
 	if drawData.showBigMap then
 
+		if BIGMAP_SOUND_ENABLED then playSoundFrontEnd(BIGMAP_SHOW_SOUND_ID) end
+
 		drawData.bigMapWasMoved = false
 
 		if BIGMAP_HIDE_CHAT then
@@ -1409,6 +1416,9 @@ local function switchBigMap()
 		end
 
 	else
+
+		if BIGMAP_SOUND_ENABLED then playSoundFrontEnd(BIGMAP_HIDE_SOUND_ID) end
+
 		if drawData.bigMapSwitchChatWasVisible then
 			showChat(true)
 		end
@@ -1467,6 +1477,7 @@ local function bigMapSetWaypoint()
 		if dist < BIGMAP_WAYPOINT_REMOVE_DISTANCE then
 			destroyElement(drawData.waypointBlip)
 			drawData.waypointBlip = nil
+			if BIGMAP_SOUND_ENABLED then playSoundFrontEnd(BIGMAP_REMOVE_WAYPOINT_SOUND_ID) end
 			return
 		end
 	end
@@ -1477,6 +1488,8 @@ local function bigMapSetWaypoint()
 	end
 	drawData.waypointBlip = createBlip(worldX, worldY, 0, RADAR_SPRITE.WAYPOINT)
 	setBlipVisibleDistance(drawData.waypointBlip, MAP_WORLD_SIZE)
+	if BIGMAP_SOUND_ENABLED then playSoundFrontEnd(BIGMAP_SET_WAYPOINT_SOUND_ID) end
+
 end
 
 local function zoomBigMap(step)

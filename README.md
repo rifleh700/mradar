@@ -20,9 +20,10 @@ You can configure radar with predefined global Lua variables. See `mradar_main_c
 - `RADAR_RECTANGLE` (**default is `false`**) - enables rectangle radar (instead of circle)
 - `BIGMAP_CURSOR_SWITCHABLE` (**default is `true`**) - enables cursor switching when big map (F11) is visible
 - `BIGMAP_SWITCH_CURSOR_KEY` (**default is `mouse3`**) - cursor switching key
-- `BIGMAP_CURSOR_ENABLED_DEFAULT` (**default is `false`**) - enables cursor by default when big map (F11) is visible
+- `BIGMAP_CURSOR_ENABLED` (**default is `false`**) - enables cursor by default when big map (F11) is visible
 - `BIGMAP_WAYPOINT_ENABLED` (**default is `true`** - depends on enabled cursor) - enables `waypoint` blip by click
 - `BIGMAP_POST_GUI` (**defaults is `false`**) - enables big map "post-gui" drawing
+- `BIGMAP_SOUND_ENABLED` (**defaults is `false`**) - enables big map sounds
 
 ## Exported client-side functions
 - `getMRadarVisible()`
