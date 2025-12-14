@@ -2,7 +2,7 @@
 
 	<info
 		author="matran/rifleh"
-		version="3.0.1"
+		version="3.2.0"
 		name="mradar"
 		description="Reengineered default GTA:SA radar"
 		type="script"
