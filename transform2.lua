@@ -22,8 +22,8 @@ end
 
 function transform2.rotate(rad)
 
-	c = math.cos(rad)
-	s = math.sin(rad)
+	local c = math.cos(rad)
+	local s = math.sin(rad)
 
 	return
 	{
