@@ -76,6 +76,8 @@ local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
 -- F11 map
 local BIGMAP_CURSOR_ENABLED_DEFAULT = false
+local BIGMAP_CURSOR_SWITCHABLE = true
+local BIGMAP_WAYPOINT_ENABLED = BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED_DEFAULT
 local BIGMAP_ATTACH_TO_PLAYER = true
 local BIGMAP_HIDE_CHAT = true
 local BIGMAP_POST_GUI = false
@@ -114,6 +116,8 @@ local BIGMAP_SWITCH_LEGEND_KEY = "l"
 local BIGMAP_SWITCH_CURSOR_KEY = "mouse3"
 local BIGMAP_MOVE_MOUSE_KEY = "mouse1"
 local BIGMAP_SET_WAYPOINT_KEY = "mouse2"
+local BIGMAP_ZOOM_IN_MOUSE_KEY = "mouse_wheel_up"
+local BIGMAP_ZOOM_OUT_MOUSE_KEY = "mouse_wheel_down"
 local BIGMAP_WAYPOINT_REMOVE_DISTANCE = 50
 
 
@@ -399,15 +403,6 @@ local function init()
 
 	setPlayerHudComponentVisible("radar", false)
 	toggleControl("radar", false)
-	toggleControl("radar_zoom_in", false)
-	toggleControl("radar_zoom_out", false)
-	toggleControl("radar_move_north", false)
-	toggleControl("radar_move_south", false)
-	toggleControl("radar_move_east", false)
-	toggleControl("radar_move_west", false)
-	toggleControl("radar_opacity_down", false)
-	toggleControl("radar_opacity_up", false)
-	toggleControl("radar_help", false)
 
 	return true
 end
@@ -416,15 +411,6 @@ local function term()
 
 	setPlayerHudComponentVisible("radar", true)
 	toggleControl("radar", true)
-	toggleControl("radar_zoom_in", true)
-	toggleControl("radar_zoom_out", true)
-	toggleControl("radar_move_north", true)
-	toggleControl("radar_move_south", true)
-	toggleControl("radar_move_east", true)
-	toggleControl("radar_move_west", true)
-	toggleControl("radar_opacity_down", true)
-	toggleControl("radar_opacity_up", true)
-	toggleControl("radar_help", true)
 
 	return true
 end
@@ -1237,12 +1223,12 @@ local function drawBigMapHelp()
 	local rows = {
 		{ "help", table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
 		{ "legend", BIGMAP_SWITCH_LEGEND_KEY },
-		{ "cursor", BIGMAP_SWITCH_CURSOR_KEY },
-		{ "waypoint", BIGMAP_SET_WAYPOINT_KEY .. " (cursor)" },
 		{ "zoom", table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
-		{ "move", (drawData.bigMapCursorEnabled and "mouse1 / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
+		{ "move", ((BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED_DEFAULT) and BIGMAP_MOVE_MOUSE_KEY .. " / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
 		{ "opacity", table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
 	}
+	if BIGMAP_CURSOR_SWITCHABLE then rows[#rows + 1] = { "cursor", BIGMAP_SWITCH_CURSOR_KEY } end
+	if BIGMAP_WAYPOINT_ENABLED then rows[#rows + 1] = { "waypoint", BIGMAP_SET_WAYPOINT_KEY } end
 
 	local actionTextWidth = 0
 	local keysTextWidth = 0
@@ -1404,6 +1390,10 @@ end
 
 local function switchBigMap()
 
+	-- enable F11 control back if default map is visible (for hiding it next time)
+	-- disable F11 control if other resource enabled it
+	toggleControl("radar", isPlayerMapVisible())
+
 	drawData.showBigMap = not drawData.showBigMap
 	showCursor(drawData.bigMapCursorEnabled and drawData.showBigMap)
 
@@ -1446,6 +1436,7 @@ end
 
 local function switchBigMapCursor()
 
+	if not BIGMAP_CURSOR_SWITCHABLE then return false end
 	if not drawData.showBigMap then return false end
 
 	drawData.bigMapCursorEnabled = not drawData.bigMapCursorEnabled
@@ -1456,6 +1447,7 @@ end
 
 local function bigMapSetWaypoint()
 
+	if not BIGMAP_WAYPOINT_ENABLED then return end
 	if not drawData.showBigMap then return end
 	if not isCursorShowing() then return end
 	if guiGetInputEnabled() then return end
@@ -1560,6 +1552,9 @@ addEventHandler("onClientRender", root, draw)
 
 bindKey(BIGMAP_SWITCH_LEGEND_KEY, "down", switchBigMapLegend)
 bindKey(BIGMAP_SWITCH_CURSOR_KEY, "down", switchBigMapCursor)
+bindKey(BIGMAP_ZOOM_IN_MOUSE_KEY, "down", BIGMAP_ZOOM_IN_COMMAND)
+bindKey(BIGMAP_ZOOM_OUT_MOUSE_KEY, "down", BIGMAP_ZOOM_OUT_COMMAND)
+bindKey(BIGMAP_SET_WAYPOINT_KEY, "up", bigMapSetWaypoint)
 addCommandHandler(BIGMAP_SWITCH_COMMAND, switchBigMap)
 addCommandHandler(BIGMAP_SWITCH_HELP_COMMAND, switchBigMapHelp)
 addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCALE_STEP) end)
@@ -1586,7 +1581,6 @@ end)
 addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
 addEventHandler("onClientMouseLeave", root, function(_, _, enteredGui) drawData.cursorOnGui = enteredGui ~= nil end)
-bindKey(BIGMAP_SET_WAYPOINT_KEY, "up", bigMapSetWaypoint)
 
 
 ------------------------------------------------------------------------------------------------------------------------
