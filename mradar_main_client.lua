@@ -877,7 +877,7 @@ end
 local function drawRadarBlip(data)
 
 	local r, g, b, a = data.color[1], data.color[2], data.color[3], data.color[4]
-	if (not RADAR_BLIP_COLOR_ENABLED) and (icon ~= RADAR_SPRITE.NONE) then
+	if (not RADAR_BLIP_COLOR_ENABLED) and (data.icon ~= RADAR_SPRITE.NONE) then
 		r, g, b = 255, 255, 255
 	end
 
