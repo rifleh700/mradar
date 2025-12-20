@@ -18,6 +18,7 @@ Reengineered original GTA:SA radar for MTA:SA
 You can configure radar with predefined global Lua variables. See `mradar_main_client.lua` script file. Some of important setting see below
 - `RADAR_BLIP_COLOR_ENABLED` (**default is `false`**) - enables blips painting (usually blips have red or black color, u should always define blips color when this feature is enabled) 
 - `RADAR_RECTANGLE` (**default is `false`**) - enables rectangle radar (instead of circle)
+- `BIGMAP_ENABLED` (**default is `true`**) - enables new big map (F11)
 - `BIGMAP_CURSOR_SWITCHABLE` (**default is `true`**) - enables cursor switching when big map (F11) is visible
 - `BIGMAP_SWITCH_CURSOR_KEY` (**default is `mouse3`**) - cursor switching key
 - `BIGMAP_CURSOR_ENABLED` (**default is `false`**) - enables cursor by default when big map (F11) is visible

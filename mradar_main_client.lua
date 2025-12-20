@@ -78,6 +78,7 @@ local RADAR_BLIP_CACHE_INTERVAL = 1000 / 30
 local RADAR_AREA_CACHE_INTERVAL = 1000 / 30
 
 -- F11 map
+local BIGMAP_ENABLED = true
 local BIGMAP_CURSOR_ENABLED = false
 local BIGMAP_CURSOR_SWITCHABLE = true
 local BIGMAP_WAYPOINT_ENABLED = BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED
@@ -404,25 +405,6 @@ local function loadTextures()
 			)
 		end
 	end
-
-	return true
-end
-
--- Radar.cpp: CRadar::Initialise() // 0x587FB0
-local function init()
-
-	loadTextures()
-
-	setPlayerHudComponentVisible("radar", false)
-	toggleControl("radar", false)
-
-	return true
-end
-
-local function term()
-
-	setPlayerHudComponentVisible("radar", true)
-	toggleControl("radar", true)
 
 	return true
 end
@@ -966,6 +948,7 @@ local function drawRadar()
 
 	if not drawData.showRadar then return true end
 	if drawData.showBigMap then return true end
+	if isPlayerMapVisible() then return true end
 
 	updateRadarMapRtViews()
 
@@ -1421,6 +1404,7 @@ end
 
 local function drawBigMap()
 
+	if not BIGMAP_ENABLED then return true end
 	if not drawData.showBigMap then return true end
 
 	drawData.bigMapDrawnSprites = {}
@@ -1601,45 +1585,70 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 
+-- Radar.cpp: CRadar::Initialise() // 0x587FB0
+local function init()
+
+	loadTextures()
+
+	setPlayerHudComponentVisible("radar", false)
+
+	addEventHandler("onClientRestore", root, function() drawData.areRenderTargetsReady = false end)
+	addEventHandler("onClientRender", root, draw)
+
+	if BIGMAP_ENABLED then
+
+		toggleControl("radar", false)
+
+		bindKey(BIGMAP_SWITCH_LEGEND_KEY, "down", switchBigMapLegend)
+		bindKey(BIGMAP_SWITCH_CURSOR_KEY, "down", switchBigMapCursor)
+		bindKey(BIGMAP_ZOOM_IN_MOUSE_KEY, "down", BIGMAP_ZOOM_IN_COMMAND)
+		bindKey(BIGMAP_ZOOM_OUT_MOUSE_KEY, "down", BIGMAP_ZOOM_OUT_COMMAND)
+		bindKey(BIGMAP_SET_WAYPOINT_KEY, "up", bigMapSetWaypoint)
+		addCommandHandler(BIGMAP_SWITCH_COMMAND, switchBigMap)
+		addCommandHandler(BIGMAP_SWITCH_HELP_COMMAND, switchBigMapHelp)
+		addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCALE_STEP) end)
+		addCommandHandler(BIGMAP_ZOOM_OUT_COMMAND, function() zoomBigMap(-BIGMAP_ZOOM_SCALE_STEP) end)
+		addCommandHandler(BIGMAP_OPACITY_UP_COMMAND, function() changeBigMapOpacity(BIGMAP_CHANGE_OPACITY_STEP) end)
+		addCommandHandler(BIGMAP_OPACITY_DOWN_COMMAND, function() changeBigMapOpacity(-BIGMAP_CHANGE_OPACITY_STEP) end)
+		addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function()
+			drawData.bigMapWasMoved = true
+			moveBigMap(0, BIGMAP_MOVE_STEP)
+		end)
+		addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function()
+			drawData.bigMapWasMoved = true
+			moveBigMap(0, -BIGMAP_MOVE_STEP)
+		end)
+		addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function()
+			drawData.bigMapWasMoved = true
+			moveBigMap(BIGMAP_MOVE_STEP, 0)
+		end)
+		addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function()
+			drawData.bigMapWasMoved = true
+			moveBigMap(-BIGMAP_MOVE_STEP, 0)
+		end)
+
+		addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
+		addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
+		addEventHandler("onClientMouseLeave", root, function(_, _, enteredGui) drawData.cursorOnGui = enteredGui ~= nil end)
+	end
+
+	return true
+end
+
+local function term()
+
+	setPlayerHudComponentVisible("radar", true)
+
+	if BIGMAP_ENABLED then
+
+		toggleControl("radar", true)
+	end
+
+	return true
+end
 
 init()
 addEventHandler("onClientResourceStop", resourceRoot, term)
-
-addEventHandler("onClientRestore", root, function() drawData.areRenderTargetsReady = false end)
-addEventHandler("onClientRender", root, draw)
-
-bindKey(BIGMAP_SWITCH_LEGEND_KEY, "down", switchBigMapLegend)
-bindKey(BIGMAP_SWITCH_CURSOR_KEY, "down", switchBigMapCursor)
-bindKey(BIGMAP_ZOOM_IN_MOUSE_KEY, "down", BIGMAP_ZOOM_IN_COMMAND)
-bindKey(BIGMAP_ZOOM_OUT_MOUSE_KEY, "down", BIGMAP_ZOOM_OUT_COMMAND)
-bindKey(BIGMAP_SET_WAYPOINT_KEY, "up", bigMapSetWaypoint)
-addCommandHandler(BIGMAP_SWITCH_COMMAND, switchBigMap)
-addCommandHandler(BIGMAP_SWITCH_HELP_COMMAND, switchBigMapHelp)
-addCommandHandler(BIGMAP_ZOOM_IN_COMMAND, function() zoomBigMap(BIGMAP_ZOOM_SCALE_STEP) end)
-addCommandHandler(BIGMAP_ZOOM_OUT_COMMAND, function() zoomBigMap(-BIGMAP_ZOOM_SCALE_STEP) end)
-addCommandHandler(BIGMAP_OPACITY_UP_COMMAND, function() changeBigMapOpacity(BIGMAP_CHANGE_OPACITY_STEP) end)
-addCommandHandler(BIGMAP_OPACITY_DOWN_COMMAND, function() changeBigMapOpacity(-BIGMAP_CHANGE_OPACITY_STEP) end)
-addCommandHandler(BIGMAP_MOVE_NORTH_COMMAND, function()
-	drawData.bigMapWasMoved = true
-	moveBigMap(0, BIGMAP_MOVE_STEP)
-end)
-addCommandHandler(BIGMAP_MOVE_SOUTH_COMMAND, function()
-	drawData.bigMapWasMoved = true
-	moveBigMap(0, -BIGMAP_MOVE_STEP)
-end)
-addCommandHandler(BIGMAP_MOVE_WEST_COMMAND, function()
-	drawData.bigMapWasMoved = true
-	moveBigMap(BIGMAP_MOVE_STEP, 0)
-end)
-addCommandHandler(BIGMAP_MOVE_EAST_COMMAND, function()
-	drawData.bigMapWasMoved = true
-	moveBigMap(-BIGMAP_MOVE_STEP, 0)
-end)
-
-addEventHandler("onClientMouseEnter", root, function() drawData.cursorOnGui = true end)
-addEventHandler("onClientMouseMove", root, function() drawData.cursorOnGui = true end)
-addEventHandler("onClientMouseLeave", root, function(_, _, enteredGui) drawData.cursorOnGui = enteredGui ~= nil end)
-
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
