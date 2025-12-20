@@ -70,9 +70,12 @@ local RADAR_BLIP_ALPHA_MULTIPLIER = 1
 local RADAR_BLIP_VECTOR_OFFSET = RADAR_BORDER_WIDTH / 2
 local RADAR_BLIP_TRACE_TEXTURES_PATH = TEXTURE_PATH .. "trace/"
 local RADAR_BLIP_CENTRE_SIZE_MULTIPLIER = 0.9
-local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.5
+local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.6
 local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
+
+local RADAR_BLIP_CACHE_INTERVAL = 1000 / 30
+local RADAR_AREA_CACHE_INTERVAL = 1000 / 30
 
 -- F11 map
 local BIGMAP_CURSOR_ENABLED = false
@@ -160,6 +163,8 @@ drawData.flashingRadarAreaAlphaMultiplier = 0
 drawData.showRadar = true
 drawData.radarMapRtView = nil
 drawData.radarMapRtRotView = nil                  -- Radar.h: float& cachedCos; float& cachedSin
+drawData.radarBlipCacheTicks = getTickCount() - RADAR_BLIP_CACHE_INTERVAL * 2
+drawData.radarAreaCacheTicks = getTickCount() - RADAR_AREA_CACHE_INTERVAL * 2
 
 drawData.showBigMap = false
 drawData.showBigMapHelp = true
@@ -248,39 +253,41 @@ local function getVehicleRealType(vehicle)
 	return getVehicleType(vehicle)
 end
 
-local function isBlipVisible(blip, x, y, int, dim)
+local function getVisibleBlipsData(x, y, int, dim)
 
-	local bx, by, bz = getElementPosition(blip)
-	local dis = getBlipVisibleDistance(blip)
-	if math_abs(bx - x) > dis then return false end
-	if math_abs(by - y) > dis then return false end
-	if getElementInterior(blip) ~= int then return false end
-	if getElementDimension(blip) ~= dim then return false end
-	if getDistanceBetweenPoints2D(x, y, bx, by) > dis then return false end
-	return true
-end
-
-local function getBlipsByPositionInteriorDimensionOrdered(x, y, int, dim)
-
-	local orderings = {}
-	local blips = {}
+	local data = {}
 	local number = 0
 
 	for _, blip in ipairs(getElementsByType("blip")) do
 
-		if isBlipVisible(blip, x, y, int, dim) then
+		local bx, by, bz = getElementPosition(blip)
+		local dis = getBlipVisibleDistance(blip)
+		if (math_abs(bx - x) <= dis) and (math_abs(by - y) <= dis) then
 
-			number = number + 1
-			blips[number] = blip
-			orderings[blip] = getBlipOrdering(blip)
+			if (getElementInterior(blip) == int)
+				and (getElementDimension(blip) == dim)
+				and getDistanceBetweenPoints2D(x, y, bx, by) <= dis
+				and not (getElementAttachedTo(blip) == localPlayer) then
+
+				number = number + 1
+				data[number] = {
+					pos = { bx, by, bz },
+					size = getBlipSize(blip),
+					icon = getBlipIcon(blip),
+					color = { getBlipColor(blip) },
+					ordering = getBlipOrdering(blip)
+				}
+
+			end
+
 		end
 	end
 
-	if number <= 1 then return blips end
+	if number <= 1 then return data end
 
-	table.sort(blips, function(a, b) return orderings[a] < orderings[b] end)
+	table.sort(data, function(a, b) return a.ordering < b.ordering end)
 
-	return blips
+	return data
 end
 
 function dxDrawTextWithShadow(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, ...)
@@ -597,39 +604,56 @@ local function calcFlashingRadarAreaAlphaMultiplier()
 	return (math.sin((getTickCount() % 1024) / (1024 / (math.pi * 2))) + 1.0) / 2.0
 end
 
-local function drawRadarArea(area)
+local function drawRadarArea(data)
 
-	local x, y, _ = getElementPosition(area)
-	local px, py = drawData.playerElementMatrix[4][1], drawData.playerElementMatrix[4][2]
-	if x > px + drawData.radarMapRange then return false end
-	if y > py + drawData.radarMapRange then return false end
-
-	local width, height = getRadarAreaSize(area)
-	if x + width < px - drawData.radarMapRange then return false end
-	if y + height < py - drawData.radarMapRange then return false end
-
-	local dim = getElementDimension(area)
-	if dim ~= drawData.playerDimension then return false end
-
-	local int = getElementInterior(area)
-	if int ~= drawData.playerInterior then return false end
-
-	local x1, y1 = transformWorldToRadarMapRtView(x, y + height)
-	local x2, y2 = transformWorldToRadarMapRtView(x + width, y)
-	local r, g, b, a = getRadarAreaColor(area)
-	if isRadarAreaFlashing(area) then
+	local x1, y1 = transformWorldToRadarMapRtView(data.pos[1], data.pos[2] + data.size[2])
+	local x2, y2 = transformWorldToRadarMapRtView(data.pos[1] + data.size[1], data.pos[2])
+	local a = data.color[4]
+	if data.flashing then
 		a = a * drawData.flashingRadarAreaAlphaMultiplier
 	end
 
 	dxDrawRectangle(
 		x1, y1,
 		x2 - x1, y2 - y1,
-		tocolor(r, g, b, a),
+		tocolor(data.color[1], data.color[2], data.color[3], a),
 		false,
 		true
 	)
 
 	return true
+end
+
+local function getVisibleRadarAreasData(x, y, width, height, int, dim)
+
+	local list = {}
+	local number = 0
+
+	for _, area in ipairs(getElementsByType("radararea")) do
+
+		local ax, ay, _ = getElementPosition(area)
+		if (ax <= x + width) and (ay <= y + height) then
+
+			local aw, ah = getRadarAreaSize(area)
+			if (ax + aw >= x) and (ay + ah >= y) then
+
+				if (getElementDimension(area) == dim) and (getElementInterior(area) == int) then
+
+					number = number + 1
+					list[number] = {
+						pos = { ax, ay },
+						size = { aw, ah },
+						color = { getRadarAreaColor(area) },
+						flashing = isRadarAreaFlashing(area) }
+
+				end
+
+			end
+
+		end
+	end
+
+	return list
 end
 
 -- Radar.cpp: CRadar::DrawRadarGangOverlay(bool inMenu) // 0x586650
@@ -638,8 +662,21 @@ local function drawRadarAreas()
 	dxSetRenderTarget(drawData.radarMapTilesRt)
 	dxSetBlendMode("modulate_add")
 
-	for i, area in ipairs(getElementsByType("radararea")) do
-		drawRadarArea(area)
+	if (getTickCount() - drawData.radarAreaCacheTicks) > RADAR_AREA_CACHE_INTERVAL then
+
+		drawData.radarAreaCacheTicks = getTickCount()
+		local range = drawData.radarMapRange * (RADAR_TILES_RT_SIZE / RADAR_HEIGHT)
+		drawData.radarAreaCache = getVisibleRadarAreasData(
+			drawData.playerElementMatrix[4][1] - range,
+			drawData.playerElementMatrix[4][2] - range,
+			drawData.radarMapRange * range,
+			drawData.radarMapRange * range,
+			drawData.playerInterior,
+			drawData.playerDimension)
+	end
+
+	for i, data in ipairs(drawData.radarAreaCache) do
+		drawRadarArea(data)
 	end
 
 	dxSetBlendMode("blend")
@@ -837,16 +874,18 @@ local function drawRadarSprite(spriteId, x, y, z, r, g, b, a, size, rot)
 end
 
 -- Radar.cpp: CRadar::DrawCoordBlip(int32 blipIndex, bool isSprite) // 0x586D60
-local function drawRadarBlip(blip)
+local function drawRadarBlip(data)
 
-	local x, y, z = getElementPosition(blip)
-	local icon = getBlipIcon(blip)
-	local r, g, b, a = getBlipColor(blip)
+	local r, g, b, a = data.color[1], data.color[2], data.color[3], data.color[4]
 	if (not RADAR_BLIP_COLOR_ENABLED) and (icon ~= RADAR_SPRITE.NONE) then
 		r, g, b = 255, 255, 255
 	end
 
-	drawRadarSprite(icon, x, y, z, r, g, b, a, getBlipSize(blip));
+	drawRadarSprite(
+		data.icon,
+		data.pos[1], data.pos[2], data.pos[3],
+		r, g, b, a,
+		data.size);
 
 	return true
 end
@@ -862,11 +901,17 @@ local function drawRadarBlips()
 		255, 255, 255, 255,
 		RADAR_BLIP_SIZE_GTASA_DEFAULT)
 
-	for _, blip in ipairs(getBlipsByPositionInteriorDimensionOrdered(
-		drawData.playerElementMatrix[4][1],
-		drawData.playerElementMatrix[4][2],
-		drawData.playerInterior,
-		drawData.playerDimension)) do
+	if (getTickCount() - drawData.radarBlipCacheTicks) > RADAR_BLIP_CACHE_INTERVAL then
+
+		drawData.radarBlipCacheTicks = getTickCount()
+		drawData.radarBlipCache = getVisibleBlipsData(
+			drawData.playerElementMatrix[4][1],
+			drawData.playerElementMatrix[4][2],
+			drawData.playerInterior,
+			drawData.playerDimension)
+	end
+
+	for _, blip in ipairs(drawData.radarBlipCache) do
 
 		drawRadarBlip(blip)
 	end
