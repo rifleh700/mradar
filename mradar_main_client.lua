@@ -74,8 +74,9 @@ local RADAR_BLIP_TRACE_SIZE_MULTIPLIER = 0.6
 local RADAR_BLIP_TRACE_LOW_HEIGHT_DIFF = -4.0
 local RADAR_BLIP_TRACE_HIGH_HEIGHT_DIFF = 2
 
+local RADAR_TILES_RT_INTERVAL = 1000 / 60
 local RADAR_BLIP_CACHE_INTERVAL = 1000 / 30
-local RADAR_AREA_CACHE_INTERVAL = 1000 / 30
+local RADAR_AREA_CACHE_INTERVAL = 1000 / 10
 
 -- F11 map
 local BIGMAP_ENABLED = true
@@ -164,6 +165,7 @@ drawData.flashingRadarAreaAlphaMultiplier = 0
 drawData.showRadar = true
 drawData.radarMapRtView = nil
 drawData.radarMapRtRotView = nil                  -- Radar.h: float& cachedCos; float& cachedSin
+drawData.radarTilesRtTicks = getTickCount() - RADAR_TILES_RT_INTERVAL * 2
 drawData.radarBlipCacheTicks = getTickCount() - RADAR_BLIP_CACHE_INTERVAL * 2
 drawData.radarAreaCacheTicks = getTickCount() - RADAR_AREA_CACHE_INTERVAL * 2
 
@@ -646,15 +648,16 @@ local function drawRadarAreas()
 
 	if (getTickCount() - drawData.radarAreaCacheTicks) > RADAR_AREA_CACHE_INTERVAL then
 
-		drawData.radarAreaCacheTicks = getTickCount()
+		-- drawData.radarMapRange is radar world height, we need tiles RT world size
 		local range = drawData.radarMapRange * (RADAR_TILES_RT_SIZE / RADAR_HEIGHT)
 		drawData.radarAreaCache = getVisibleRadarAreasData(
 			drawData.playerElementMatrix[4][1] - range,
 			drawData.playerElementMatrix[4][2] - range,
-			drawData.radarMapRange * range,
-			drawData.radarMapRange * range,
+			range * 2,
+			range * 2,
 			drawData.playerInterior,
 			drawData.playerDimension)
+		drawData.radarAreaCacheTicks = getTickCount()
 	end
 
 	for i, data in ipairs(drawData.radarAreaCache) do
@@ -885,12 +888,12 @@ local function drawRadarBlips()
 
 	if (getTickCount() - drawData.radarBlipCacheTicks) > RADAR_BLIP_CACHE_INTERVAL then
 
-		drawData.radarBlipCacheTicks = getTickCount()
 		drawData.radarBlipCache = getVisibleBlipsData(
 			drawData.playerElementMatrix[4][1],
 			drawData.playerElementMatrix[4][2],
 			drawData.playerInterior,
 			drawData.playerDimension)
+		drawData.radarBlipCacheTicks = getTickCount()
 	end
 
 	for _, blip in ipairs(drawData.radarBlipCache) do
@@ -962,8 +965,12 @@ local function drawRadar()
 		drawData.areRenderTargetsReady = true
 	end
 
-	drawRadarMapTiles()
-	drawRadarAreas()
+	if (getTickCount() - drawData.radarTilesRtTicks) > RADAR_TILES_RT_INTERVAL then
+		drawRadarMapTiles()
+		drawRadarAreas()
+		drawData.radarTilesRtTicks = getTickCount()
+	end
+
 	drawAltimeter()
 	drawRadarShader()
 	drawRadarBlips()

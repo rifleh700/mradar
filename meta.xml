@@ -2,11 +2,13 @@
 
 	<info
 		author="matran/rifleh"
-		version="3.6.0"
+		version="3.7.0"
 		name="mradar"
 		description="Reengineered default GTA:SA radar"
 		type="script"
 	/>
+
+	<min_mta_version client="1.6.0-9.0" />
 
 	<script src="transform2.lua" type="shared" cache="false"/>
 
