@@ -33,7 +33,7 @@ local RADAR_LEFT_OFFSET = RADAR_BOTTOM_OFFSET * (11 / 6)
 local RADAR_SCREEN_X = RADAR_LEFT_OFFSET
 local RADAR_SCREEN_Y = SCREEN_HEIGHT - RADAR_BOTTOM_OFFSET - RADAR_HEIGHT
 local RADAR_COLOR = tocolor(255, 255, 255, 255)
-local RADAR_BORDER_WIDTH = RADAR_HEIGHT / 20
+local RADAR_BORDER_WIDTH = RADAR_HEIGHT / 24
 local RADAR_BORDER_FADING = 2
 local RADAR_BORDER_COLOR = tocolor(0, 0, 0, 255)
 local RADAR_SPRITE_TEXTURES_PATH = TEXTURE_PATH .. "hud/"
@@ -185,6 +185,9 @@ drawData.waypointBlip = nil
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
+
+local TEXT = TEXT
+local RADAR_SPRITE_TEXT = RADAR_SPRITE_TEXT
 
 local math_sqrt = math.sqrt
 local math_floor = math.floor
@@ -1261,14 +1264,14 @@ local function drawBigMapHelp()
 	if not drawData.showBigMapHelp then return false end
 
 	local rows = {
-		{ "help", table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
-		{ "legend", BIGMAP_SWITCH_LEGEND_KEY },
-		{ "zoom", table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
-		{ "move", ((BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED) and BIGMAP_MOVE_MOUSE_KEY .. " / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
-		{ "opacity", table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
+		{ TEXT.HELP, table.concat(getControlsKeys({ BIGMAP_SWITCH_HELP_COMMAND }), " / ") },
+		{ TEXT.LEGEND, BIGMAP_SWITCH_LEGEND_KEY },
+		{ TEXT.ZOOM, table.concat(getControlsKeys({ BIGMAP_ZOOM_IN_COMMAND, BIGMAP_ZOOM_OUT_COMMAND }), " / ") },
+		{ TEXT.MOVE, ((BIGMAP_CURSOR_SWITCHABLE or BIGMAP_CURSOR_ENABLED) and BIGMAP_MOVE_MOUSE_KEY .. " / " or "") .. table.concat(getControlsKeys({ BIGMAP_MOVE_NORTH_COMMAND, BIGMAP_MOVE_SOUTH_COMMAND, BIGMAP_MOVE_EAST_COMMAND, BIGMAP_MOVE_WEST_COMMAND }), " / ") },
+		{ TEXT.OPACITY, table.concat(getControlsKeys({ BIGMAP_OPACITY_UP_COMMAND, BIGMAP_OPACITY_DOWN_COMMAND }), " / ") }
 	}
-	if BIGMAP_CURSOR_SWITCHABLE then rows[#rows + 1] = { "cursor", BIGMAP_SWITCH_CURSOR_KEY } end
-	if BIGMAP_WAYPOINT_ENABLED then rows[#rows + 1] = { "waypoint", BIGMAP_SET_WAYPOINT_KEY } end
+	if BIGMAP_CURSOR_SWITCHABLE then rows[#rows + 1] = { TEXT.CURSOR, BIGMAP_SWITCH_CURSOR_KEY } end
+	if BIGMAP_WAYPOINT_ENABLED then rows[#rows + 1] = { TEXT.WAYPOINT, BIGMAP_SET_WAYPOINT_KEY } end
 
 	local actionTextWidth = 0
 	local keysTextWidth = 0
@@ -1339,7 +1342,7 @@ local function collectBigMapLegendItems()
 
 	for _, icon in ipairs(icons) do
 		local texture = drawData.radarSpriteTextures[icon]
-		local name = RADAR_SPRITE_NAMES[icon]
+		local name = RADAR_SPRITE_TEXT[icon]
 		if name and texture then
 			table.insert(items, { texture, name })
 		end

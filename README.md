@@ -13,6 +13,16 @@ Reengineered original GTA:SA radar for MTA:SA
 - waypoint by click (by [Southland-FR](https://github.com/Southland-FR))
 - map legend
 - map cursor moving
+- localization support
+
+## Localization
+
+Implemented languages:
+- English (default)
+- Spanish
+- Russian
+
+Choose one of `text` script files in `meta.xml`
 
 ## Settings
 You can configure radar with predefined global Lua variables. See `mradar_main_client.lua` script file. Some of important setting see below

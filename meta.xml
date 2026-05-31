@@ -2,7 +2,7 @@
 
 	<info
 		author="matran/rifleh"
-		version="3.7.0"
+		version="3.8.0"
 		name="mradar"
 		description="Reengineered default GTA:SA radar"
 		type="script"
@@ -13,6 +13,15 @@
 	<script src="transform2.lua" type="shared" cache="false"/>
 
 	<script src="mradar_dict_client.lua" type="client" cache="false"/>
+
+	<!-- localization (choose one) -->
+	<!-- English -->
+	<script src="mradar_text_en_client.lua" type="client" cache="false"/>
+	<!-- Spanish -->
+	<!--<script src="mradar_text_es_client.lua" type="client" cache="false"/>-->
+	<!-- Russian -->
+	<!--<script src="mradar_text_ru_client.lua" type="client" cache="false"/>-->
+
 	<script src="mradar_main_client.lua" type="client" cache="false"/>
 
 	<export function="getMRadarVisible" type="client"/>
