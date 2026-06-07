@@ -200,3 +200,130 @@ VEHICLE_REAL_TYPE = {
 	QUAD = "Quad",
 	HOVERCRAFT = "Hovercraft" -- custom type (original type is "Plane")
 }
+
+-- eWeaponType.h
+WEAPON_ID = {
+
+	UNARMED = 0,
+	BRASSKNUCKLE = 1,
+	GOLFCLUB = 2,
+	NIGHTSTICK = 3,
+	KNIFE = 4,
+	BASEBALLBAT = 5,
+	SHOVEL = 6,
+	POOL_CUE = 7,
+	KATANA = 8,
+	CHAINSAW = 9,
+
+	-- gifts
+	DILDO1 = 10,
+	DILDO2 = 11,
+	VIBE1 = 12,
+	VIBE2 = 13,
+	FLOWERS = 14,
+	CANE = 15,
+
+	GRENADE = 16,
+	TEARGAS = 17,
+	MOLOTOV = 18,
+	ROCKET = 19,
+	ROCKET_HS = 20,
+	FREEFALL_BOMB = 21,
+
+	-- FIRST SKILL WEAPON
+	PISTOL = 22,
+	PISTOL_SILENCED = 23,
+	DESERT_EAGLE = 24,
+	SHOTGUN = 25,
+	SAWNOFF_SHOTGUN = 26, -- one handed
+	SPAS12_SHOTGUN = 27,
+	MICRO_UZI = 28,
+	MP5 = 29,
+	AK47 = 30,
+	M4 = 31,
+	TEC9 = 32,
+	-- END SKILL WEAPONS
+
+	COUNTRYRIFLE = 33,
+	SNIPERRIFLE = 34,
+	RLAUNCHER = 35,
+	RLAUNCHER_HS = 36,
+	FLAMETHROWER = 37,
+	MINIGUN = 38,
+	REMOTE_SATCHEL_CHARGE = 39,
+	DETONATOR = 40,
+	SPRAYCAN = 41,
+	EXTINGUISHER = 42,
+	CAMERA = 43,
+	NIGHTVISION = 44,
+	INFRARED = 45,
+	PARACHUTE = 46
+}
+
+WEAPON_AMMO_CLIPPED = {
+
+	[WEAPON_ID.PISTOL] = true,
+	[WEAPON_ID.PISTOL_SILENCED] = true,
+	[WEAPON_ID.DESERT_EAGLE] = true,
+	[WEAPON_ID.SAWNOFF_SHOTGUN] = true,
+	[WEAPON_ID.SPAS12_SHOTGUN] = true,
+	[WEAPON_ID.MICRO_UZI] = true,
+	[WEAPON_ID.MP5] = true,
+	[WEAPON_ID.AK47] = true,
+	[WEAPON_ID.M4] = true,
+	[WEAPON_ID.TEC9] = true,
+	[WEAPON_ID.FLAMETHROWER] = true,
+	[WEAPON_ID.MINIGUN] = true,
+	[WEAPON_ID.SPRAYCAN] = true,
+	[WEAPON_ID.EXTINGUISHER] = true,
+	[WEAPON_ID.CAMERA] = true
+}
+
+-- eModelID.h
+WEAPON_SPRITE_TEXTURE_NAMES = {
+
+	[WEAPON_ID.UNARMED] = "fist",
+	[WEAPON_ID.BRASSKNUCKLE] = "BRASSKNUCKLEicon",
+	[WEAPON_ID.GOLFCLUB] = "golfclubicon",
+	[WEAPON_ID.NIGHTSTICK] = "nitestickicon",
+	[WEAPON_ID.KNIFE] = "knifecuricon",
+	[WEAPON_ID.BASEBALLBAT] = "baticon",
+	[WEAPON_ID.SHOVEL] = "shovelicon",
+	[WEAPON_ID.POOL_CUE] = "poolcueicon",
+	[WEAPON_ID.KATANA] = "katanaicon",
+	[WEAPON_ID.CHAINSAW] = "chnsawicon",
+	[WEAPON_ID.DILDO1] = "gun_dildo1icon",
+	[WEAPON_ID.DILDO2] = "gun_dildo2icon",
+	[WEAPON_ID.VIBE1] = "gun_vibe1icon",
+	[WEAPON_ID.VIBE2] = "gun_vibe2icon",
+	[WEAPON_ID.FLOWERS] = "floweraicon",
+	[WEAPON_ID.CANE] = "gun_caneicon",
+	[WEAPON_ID.GRENADE] = "grenadeicon",
+	[WEAPON_ID.TEARGAS] = "TearGasicon",
+	[WEAPON_ID.MOLOTOV] = "molotovicon",
+	[WEAPON_ID.PISTOL] = "colt45icon",
+	[WEAPON_ID.PISTOL_SILENCED] = "silencedicon",
+	[WEAPON_ID.DESERT_EAGLE] = "desert_eagleicon",
+	[WEAPON_ID.SHOTGUN] = "chromegunicon",
+	[WEAPON_ID.SAWNOFF_SHOTGUN] = "sawnofficon",
+	[WEAPON_ID.SPAS12_SHOTGUN] = "shotgspaicon",
+	[WEAPON_ID.MICRO_UZI] = "micro_uziicon",
+	[WEAPON_ID.MP5] = "mp5lngicon",
+	[WEAPON_ID.AK47] = "ak47icon",
+	[WEAPON_ID.M4] = "M4icon",
+	[WEAPON_ID.TEC9] = "tec9icon",
+	[WEAPON_ID.COUNTRYRIFLE] = "cuntgunicon",
+	[WEAPON_ID.SNIPERRIFLE] = "SNIPERicon",
+	[WEAPON_ID.RLAUNCHER] = "rocketlaicon",
+	[WEAPON_ID.RLAUNCHER_HS] = "heatseekicon",
+	[WEAPON_ID.FLAMETHROWER] = "flameicon",
+	[WEAPON_ID.MINIGUN] = "minigunicon",
+	[WEAPON_ID.REMOTE_SATCHEL_CHARGE] = "satchelicon",
+	[WEAPON_ID.DETONATOR] = "bombicon",
+	[WEAPON_ID.SPRAYCAN] = "SPRAYCANicon",
+	[WEAPON_ID.EXTINGUISHER] = "fire_exicon",
+	[WEAPON_ID.CAMERA] = "Cameraicon",
+	[WEAPON_ID.NIGHTVISION] = "nvgogglesicon",
+	[WEAPON_ID.INFRARED] = "irgogglesicon",
+	[WEAPON_ID.PARACHUTE] = "gun_paraIcon"
+}

@@ -370,7 +370,7 @@ end
 
 -- Radar.cpp: CRadar::LoadTextures() // 0x5827D0
 -- Hud.cpp: CHud::Initialise() // 0x5BA850
-local function loadTextures()
+local function loadTexturesRadar()
 
 	for id, name in pairs(RADAR_SPRITE_TEXTURE_NAMES) do
 		drawData.radarSpriteTextures[id] = dxCreateTexture(
@@ -1596,9 +1596,9 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 
 -- Radar.cpp: CRadar::Initialise() // 0x587FB0
-local function init()
+local function initRadar()
 
-	loadTextures()
+	loadTexturesRadar()
 
 	setPlayerHudComponentVisible("radar", false)
 
@@ -1645,7 +1645,7 @@ local function init()
 	return true
 end
 
-local function term()
+local function termRadar()
 
 	setPlayerHudComponentVisible("radar", true)
 
@@ -1657,8 +1657,8 @@ local function term()
 	return true
 end
 
-init()
-addEventHandler("onClientResourceStop", resourceRoot, term)
+addEventHandler("onClientResourceStart", resourceRoot, initRadar)
+addEventHandler("onClientResourceStop", resourceRoot, termRadar)
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -1670,7 +1670,8 @@ function getMRadarVisible()
 end
 
 function setMRadarVisible(visible)
-	if type(visible) ~= "boolean" then error("bad argument #1 'visible' to 'setMRadarVisible' (boolean expected)", 1) end
+
+	visible = visible and true or false
 
 	if drawData.showRadar == visible then return false end
 	drawData.showRadar = visible

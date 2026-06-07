@@ -2,9 +2,9 @@
 
 	<info
 		author="matran/rifleh"
-		version="3.9.0"
+		version="4.0.0"
 		name="mradar"
-		description="Reengineered default GTA:SA radar"
+		description="Reengineered default GTA:SA radar and hud"
 		type="script"
 	/>
 
@@ -21,11 +21,14 @@
 
 	<script src="mradar_main_client.lua" type="client" cache="false"/>
 
-	<!-- comment this if u don't need new crosshair -->
+	<!-- comment script if u don't need it -->
 	<script src="mradar_crosshair_client.lua" type="client" cache="false"/>
+	<script src="mradar_hud_client.lua" type="client" cache="false"/>
 
 	<export function="getMRadarVisible" type="client"/>
 	<export function="setMRadarVisible" type="client"/>
+	<export function="getMHudVisible" type="client"/>
+	<export function="setMHudVisible" type="client"/>
 
 	<file src="transform.fx"/>
 	<file src="circle.fx"/>
@@ -37,5 +40,6 @@
 	<file src="txd/hud/*" />
 	<file src="txd/radar/*" />
 	<file src="txd/crosshair/*" />
+	<file src="txd/weapon/*" />
 
 </meta>

@@ -1,5 +1,5 @@
 # mradar
-Reengineered original GTA:SA radar for MTA:SA
+Reengineered original GTA:SA radar and hud for MTA:SA
 
 ## Features
 - default blips and radar areas are supported
@@ -42,6 +42,8 @@ If you don't want to use new crosshair then comment `mradar_crosshair_client.lua
 ## Exported client-side functions
 - `getMRadarVisible()`
 - `setMRadarVisible(bool visible)`
+- `getMHudVisible()`
+- `setMHudVisible(bool visible)`
 
 ## Screenshots
 
@@ -53,3 +55,4 @@ If you don't want to use new crosshair then comment `mradar_crosshair_client.lua
 ![screenshot6](https://i.imgur.com/Fbv28ue.jpeg)
 ![screenshot7](https://i.imgur.com/CZ6B879.jpeg)
 ![screenshot8](https://i.imgur.com/snoqD4H.png)
+![screenshot9](https://i.imgur.com/9BpVVUu.jpeg)
