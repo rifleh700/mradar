@@ -14,6 +14,7 @@ Reengineered original GTA:SA radar for MTA:SA
 - map legend
 - map cursor moving
 - localization support
+- new crosshair
 
 ## Localization
 
@@ -36,6 +37,8 @@ You can configure radar with predefined global Lua variables. See `mradar_main_c
 - `BIGMAP_POST_GUI` (**defaults is `false`**) - enables big map "post-gui" drawing
 - `BIGMAP_SOUND_ENABLED` (**defaults is `false`**) - enables big map sounds
 
+If you don't want to use new crosshair then comment `mradar_crosshair_client.lua` in meta.xml (or configure script partially)
+
 ## Exported client-side functions
 - `getMRadarVisible()`
 - `setMRadarVisible(bool visible)`
@@ -48,3 +51,5 @@ You can configure radar with predefined global Lua variables. See `mradar_main_c
 ![screenshot4](https://i.imgur.com/09Sj79X.png)
 ![screenshot5](https://i.imgur.com/Kk9vmvK.jpeg)
 ![screenshot6](https://i.imgur.com/Fbv28ue.jpeg)
+![screenshot7](https://i.imgur.com/CZ6B879.jpeg)
+![screenshot8](https://i.imgur.com/snoqD4H.png)
