@@ -394,7 +394,9 @@ local function drawWantedLevel()
 	return true
 end
 
-local function draw()
+local function drawHud()
+
+	if not drawData.showHud then return true end
 
 	drawTime()
 	drawWeapon()
@@ -421,7 +423,7 @@ local function initHud()
 	setPlayerHudComponentVisible("weapon", false)
 	setPlayerHudComponentVisible("wanted", false)
 
-	addEventHandler("onClientRender", root, draw, false, "low")
+	addEventHandler("onClientRender", root, drawHud, false, "low")
 
 	return true
 end
