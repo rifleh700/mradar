@@ -6,72 +6,81 @@ local TEXTURE_EDGE = "clamp"
 local FONT_PATH = "font/"
 local FONT_QUALITY = "antialiased"
 
-local HUD_TOP_OFFSET = SCREEN_HEIGHT / 40
+local HUD_TOP_OFFSET = SCREEN_HEIGHT / 24
 local HUD_RIGHT_OFFSET = HUD_TOP_OFFSET
+local HUD_PADDING = SCREEN_HEIGHT / 216
+local HUD_FONT_HEIGHT = math.floor(SCREEN_HEIGHT / 27)
+local HUD_FONT_BORDER = math.floor(SCREEN_HEIGHT / 270)
+local HUD_FONT = dxCreateFont(FONT_PATH .. "pricedown.ttf", HUD_FONT_HEIGHT - (HUD_FONT_BORDER * 2), false, FONT_QUALITY)
+local HUD_FONT_SYMBOL_WIDTH = math.floor(dxGetTextWidth("4", 1, HUD_FONT)) + 1
+local HUD_WIDTH = HUD_FONT_SYMBOL_WIDTH * 9 + HUD_FONT_BORDER * 2
 
-local HUD_PROGRESS_BAR_WIDTH = math.floor(SCREEN_HEIGHT / 5)
-local HUD_PROGRESS_BAR_HEIGHT = math.floor(SCREEN_HEIGHT / 100)
-local HUD_PROGRESS_BAR_BORDER = math.floor(HUD_PROGRESS_BAR_HEIGHT / 3)
-local HUD_PADDING = HUD_TOP_OFFSET / 2
+local HUD_TIME_ENABLED = true
+local HUD_TIME_HEIGHT = HUD_FONT_HEIGHT
+local HUD_TIME_FONT = HUD_FONT
+local HUD_TIME_WIDTH = HUD_FONT_SYMBOL_WIDTH * 5 + HUD_FONT_BORDER * 2
+local HUD_TIME_LEFT = SCREEN_WIDTH - HUD_RIGHT_OFFSET - HUD_TIME_WIDTH
+local HUD_TIME_RIGHT = HUD_TIME_LEFT
+local HUD_TIME_TOP = HUD_TOP_OFFSET
+local HUD_TIME_BOTTOM = HUD_TIME_TOP + HUD_TIME_HEIGHT
+local HUD_TIME_X_ALIGN = "left"
+local HUD_TIME_Y_ALIGN = "center"
+local HUD_TIME_COLOR = tocolor(225, 225, 225, 255)
 
 local HUD_WEAPON_ENABLED = true
 local HUD_WEAPON_TEXTURE_PATH = "txd/weapon/"
-local HUD_WEAPON_SPRITE_SIZE = SCREEN_HEIGHT / 10
-local HUD_WEAPON_SPRITE_X = SCREEN_WIDTH - HUD_RIGHT_OFFSET - HUD_WEAPON_SPRITE_SIZE + (HUD_WEAPON_SPRITE_SIZE / 16)
+local HUD_WEAPON_SPRITE_SIZE = HUD_WIDTH - HUD_TIME_WIDTH - HUD_PADDING
+local HUD_WEAPON_SPRITE_X = HUD_TIME_LEFT - HUD_PADDING - HUD_WEAPON_SPRITE_SIZE
 local HUD_WEAPON_SPRITE_Y = HUD_TOP_OFFSET
+local HUD_WEAPON_SPRITE_Y_OFFSET = - HUD_WEAPON_SPRITE_SIZE/16
 local HUD_WEAPON_SPRITE_COLOR = tocolor(255, 255, 255, 255)
+
+local HUD_PROGRESS_BAR_WIDTH = math.floor(HUD_TIME_WIDTH)
+local HUD_PROGRESS_BAR_HEIGHT = math.floor(SCREEN_HEIGHT / 64)
+local HUD_PROGRESS_BAR_BORDER = HUD_FONT_BORDER
 
 local HUD_WEAPON_AMMO_ENABLED = HUD_WEAPON_ENABLED
 local HUD_WEAPON_AMMO_FONT = dxCreateFont(FONT_PATH .. "futurabold.ttf", math.floor(HUD_WEAPON_SPRITE_SIZE / 6), false, FONT_QUALITY)
+local HUD_WEAPON_AMMO_FONT_BORDER = math.floor(HUD_WEAPON_SPRITE_SIZE / 6 / 8)
 local HUD_WEAPON_AMMO_LEFT = HUD_WEAPON_SPRITE_X
 local HUD_WEAPON_AMMO_RIGHT = HUD_WEAPON_SPRITE_X + HUD_WEAPON_SPRITE_SIZE
-local HUD_WEAPON_AMMO_TOP = HUD_WEAPON_SPRITE_Y + HUD_WEAPON_SPRITE_SIZE
+local HUD_WEAPON_AMMO_TOP = HUD_WEAPON_SPRITE_Y + HUD_WEAPON_SPRITE_SIZE + HUD_WEAPON_SPRITE_SIZE/32
 local HUD_WEAPON_AMMO_BOTTOM = HUD_WEAPON_AMMO_TOP
 local HUD_WEAPON_AMMO_X_ALIGN = "center"
 local HUD_WEAPON_AMMO_Y_ALIGN = "bottom"
 local HUD_WEAPON_AMMO_COLOR = tocolor(172, 203, 241, 255)
 
-local HUD_TIME_ENABLED = true
-local HUD_TIME_HEIGHT = SCREEN_HEIGHT / 40 * 1.75
-local HUD_TIME_FONT = dxCreateFont(FONT_PATH .. "pricedown.ttf", HUD_TIME_HEIGHT / 1.75, false, FONT_QUALITY)
-local HUD_TIME_LEFT = HUD_WEAPON_SPRITE_X - HUD_PADDING
-local HUD_TIME_RIGHT = HUD_TIME_LEFT
-local HUD_TIME_TOP = HUD_TOP_OFFSET
-local HUD_TIME_BOTTOM = HUD_TIME_TOP
-local HUD_TIME_X_ALIGN = "right"
-local HUD_TIME_Y_ALIGN = "top"
-local HUD_TIME_COLOR = tocolor(225, 225, 225, 255)
-
-local HUD_HEALTH_ENABLED = true
-local HUD_HEALTH_WIDTH = HUD_PROGRESS_BAR_WIDTH
-local HUD_HEALTH_HEIGHT = HUD_PROGRESS_BAR_HEIGHT
-local HUD_HEALTH_X = HUD_WEAPON_SPRITE_X - HUD_PADDING - HUD_HEALTH_WIDTH
-local HUD_HEALTH_Y = HUD_TIME_TOP + HUD_TIME_HEIGHT
-local HUD_HEALTH_COLOR = tocolor(180, 25, 29, 255)
-
 local HUD_ARMOR_ENABLED = true
 local HUD_ARMOR_WIDTH = HUD_PROGRESS_BAR_WIDTH
 local HUD_ARMOR_HEIGHT = HUD_PROGRESS_BAR_HEIGHT
-local HUD_ARMOR_X = HUD_WEAPON_SPRITE_X - HUD_PADDING - HUD_ARMOR_WIDTH
-local HUD_ARMOR_Y = HUD_HEALTH_Y + HUD_HEALTH_HEIGHT + HUD_PROGRESS_BAR_BORDER * 3
+local HUD_ARMOR_X = HUD_WEAPON_SPRITE_X + HUD_WEAPON_SPRITE_SIZE + HUD_PADDING
+local HUD_ARMOR_Y = HUD_TIME_TOP + HUD_TIME_HEIGHT + HUD_PADDING/2
 local HUD_ARMOR_COLOR = tocolor(225, 225, 225, 255)
 
 local HUD_OXYGEN_ENABLED = true
 local HUD_OXYGEN_WIDTH = HUD_PROGRESS_BAR_WIDTH
 local HUD_OXYGEN_HEIGHT = HUD_PROGRESS_BAR_HEIGHT
-local HUD_OXYGEN_X = HUD_WEAPON_SPRITE_X - HUD_PADDING - HUD_ARMOR_WIDTH
-local HUD_OXYGEN_Y = HUD_ARMOR_Y + HUD_ARMOR_HEIGHT + HUD_PROGRESS_BAR_BORDER * 3
+local HUD_OXYGEN_X = HUD_WEAPON_SPRITE_X + HUD_WEAPON_SPRITE_SIZE + HUD_PADDING
+local HUD_OXYGEN_Y = HUD_ARMOR_Y + HUD_ARMOR_HEIGHT + HUD_PADDING/2
 local HUD_OXYGEN_COLOR = tocolor(172, 203, 241, 255)
 
+local HUD_HEALTH_ENABLED = true
+local HUD_HEALTH_WIDTH = HUD_PROGRESS_BAR_WIDTH
+local HUD_HEALTH_HEIGHT = HUD_PROGRESS_BAR_HEIGHT
+local HUD_HEALTH_X = HUD_WEAPON_SPRITE_X + HUD_WEAPON_SPRITE_SIZE + HUD_PADDING
+local HUD_HEALTH_Y = HUD_OXYGEN_Y + HUD_OXYGEN_HEIGHT + HUD_PADDING/2
+local HUD_HEALTH_COLOR = tocolor(180, 25, 29, 255)
+
 local HUD_MONEY_ENABLED = true
-local HUD_MONEY_HEIGHT = SCREEN_HEIGHT / 40
-local HUD_MONEY_FONT = dxCreateFont(FONT_PATH .. "pricedown.ttf", HUD_MONEY_HEIGHT, false, FONT_QUALITY)
+local HUD_MONEY_ZEROS = 8
+local HUD_MONEY_HEIGHT = HUD_FONT_HEIGHT
+local HUD_MONEY_FONT = HUD_FONT
 local HUD_MONEY_RIGHT = SCREEN_WIDTH - HUD_RIGHT_OFFSET
-local HUD_MONEY_LEFT = HUD_MONEY_RIGHT
+local HUD_MONEY_LEFT = 0
 local HUD_MONEY_TOP = HUD_WEAPON_SPRITE_Y + HUD_WEAPON_SPRITE_SIZE + HUD_PADDING
 local HUD_MONEY_BOTTOM = HUD_MONEY_TOP + HUD_MONEY_HEIGHT
 local HUD_MONEY_X_ALIGN = "right"
-local HUD_MONEY_Y_ALIGN = "top"
+local HUD_MONEY_Y_ALIGN = "center"
 local HUD_MONEY_COLOR = tocolor(54, 104, 44, 255)
 local HUD_MONEY_COLOR_NEGATIVE = tocolor(180, 25, 29, 255)
 
@@ -79,9 +88,9 @@ local HUD_WANTED_ENABLED = true
 local HUD_WANTED_MAX = 6
 local HUD_WANTED_SHOW_MAX = true
 local HUD_WANTED_TEXTURE = dxCreateTexture("txd/hud/star" .. TEXTURE_FILE_FORMAT, TEXTURE_QUALITY_FORMAT, TEXTURE_MIPMAPS, TEXTURE_EDGE)
-local HUD_WANTED_SIZE = math.floor(HUD_WEAPON_SPRITE_SIZE / 3)
+local HUD_WANTED_SIZE = math.floor(HUD_WIDTH / 6)
 local HUD_WANTED_RIGHT = SCREEN_WIDTH - HUD_RIGHT_OFFSET
-local HUD_WANTED_TOP = HUD_MONEY_BOTTOM + HUD_MONEY_HEIGHT
+local HUD_WANTED_TOP = HUD_MONEY_BOTTOM + HUD_PADDING*2
 local HUD_WANTED_COLOR = tocolor(144, 98, 16, 255)
 local HUD_WANTED_EMPTY_COLOR = tocolor(0, 0, 0, 127)
 
@@ -91,10 +100,11 @@ local HUD_WANTED_EMPTY_COLOR = tocolor(0, 0, 0, 127)
 ------------------------------------------------------------------------------------------------------------------------
 
 local math_floor = math.floor
+local string_gmatch = string.gmatch
 local tocolor = tocolor
 local getPedStat = getPedStat
 local dxDrawText = dxDrawText
-local dxGetFontHeight = dxGetFontHeight
+local dxGetTextWidth = dxGetTextWidth
 local dxDrawImage = dxDrawImage
 local dxDrawRectangle = dxDrawRectangle
 
@@ -107,13 +117,16 @@ local function fromcolor(color)
 	bitExtract(color, 24, 8)
 end
 
-local function dxDrawTextWithOutline(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, alignX, alignY, ...)
-
-	local height = dxGetFontHeight(scaleY or scaleXY or 1, font) / 1.75
-	local offset = math_floor(height / 8)
+local function dxDrawTextWithOutline(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, alignX, alignY, offset, ...)
 
 	rightX = rightX or x
 	bottomY = bottomY or y
+	offset = offset or HUD_FONT_BORDER
+
+	x = x + offset
+	y = y + offset
+	rightX = rightX - offset
+	bottomY = bottomY - offset
 
 	for i = -1, 1 do
 		for j = -1, 1 do
@@ -129,6 +142,45 @@ local function dxDrawTextWithOutline(text, x, y, rightX, bottomY, color, scaleXY
 	end
 
 	return dxDrawText(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, alignX, alignY, ...)
+end
+
+local function dxDrawTextWithOutlineMonospaced(text, x, y, rightX, bottomY, color, scaleXY, scaleY, font, alignX, alignY, offset, ...)
+
+	rightX = rightX or x
+	bottomY = bottomY or y
+
+	offset = offset or HUD_FONT_BORDER
+	local sw = math_floor(dxGetTextWidth("4", scaleXY, font)) + 1
+
+	x = alignX == "left" and x or (rightX - sw * utf8.len(text) - offset*2)
+	x = x + offset
+	y = y + offset
+	bottomY = bottomY - offset
+
+	for i = -1, 1 do
+		for j = -1, 1 do
+			local sx = x
+			for c in string_gmatch(text, ".") do
+				dxDrawText(
+					c,
+					sx + i * offset, y + j * offset,
+					sx + sw + i * offset, bottomY + j * offset,
+					tocolor(0, 0, 0, 255),
+					scaleXY, scaleY,
+					font,
+					"center", alignY, ...)
+				sx = sx + sw
+			end
+		end
+	end
+
+	local sx = x
+	for c in string_gmatch(text, ".") do
+		dxDrawText(c, sx, y, sx + sw, bottomY, color, scaleXY, scaleY, font, "center", alignY, ...)
+		sx = sx + sw
+	end
+
+	return true
 end
 
 local function dxDrawImageWithOutline(x, y, w, h, image, rot, rotx, roty, color, postGUI)
@@ -164,9 +216,14 @@ local function dxDrawRectangleProgressBar(x, y, width, height, progress, color)
 	local color2 = tocolor(math_floor(r / 2), math_floor(g / 2), math_floor(b / 2), a)
 
 	dxDrawRectangle(
-		x - border, y - border,
-		width + (border * 2), height + (border * 2),
+		x, y,
+		width, height,
 		tocolor(0, 0, 0, a))
+
+	x = x + border
+	y = y + border
+	width = width - (border * 2)
+	height = height - (border * 2)
 
 	dxDrawRectangle(
 		x, y,
@@ -230,7 +287,7 @@ local function drawTime()
 
 	local h, m = getTime()
 
-	return dxDrawTextWithOutline(
+	return dxDrawTextWithOutlineMonospaced(
 		string.format("%02d:%02d", h, m),
 		HUD_TIME_LEFT, HUD_TIME_TOP,
 		HUD_TIME_RIGHT, HUD_TIME_BOTTOM,
@@ -249,7 +306,7 @@ local function drawWeapon()
 	if not texture then return false end
 
 	return dxDrawImage(
-		HUD_WEAPON_SPRITE_X, HUD_WEAPON_SPRITE_Y,
+		HUD_WEAPON_SPRITE_X, HUD_WEAPON_SPRITE_Y + HUD_WEAPON_SPRITE_Y_OFFSET,
 		HUD_WEAPON_SPRITE_SIZE, HUD_WEAPON_SPRITE_SIZE,
 		texture,
 		0, 0, 0,
@@ -279,7 +336,8 @@ local function drawAmmo()
 		HUD_WEAPON_AMMO_COLOR,
 		1, 1,
 		HUD_WEAPON_AMMO_FONT,
-		HUD_WEAPON_AMMO_X_ALIGN, HUD_WEAPON_AMMO_Y_ALIGN)
+		HUD_WEAPON_AMMO_X_ALIGN, HUD_WEAPON_AMMO_Y_ALIGN,
+		HUD_WEAPON_AMMO_FONT_BORDER)
 end
 
 local function drawHealth()
@@ -334,15 +392,8 @@ end
 local function formatMoney(money)
 
 	local negative = money < 0
-	local str = tostring(math_floor(negative and (-money) or money))
-
-	local k = 0
-	while true do
-		str, k = string.gsub(str, "^(-?%d+)(%d%d%d)", '%1 %2')
-		if (k == 0) then break end
-	end
-
-	return negative and "- $ " .. str or "$ " .. str
+	local str = string.format("%0"..HUD_MONEY_ZEROS.."d", math_floor(negative and (-money) or money))
+	return negative and "-$" .. str or "$" .. str
 end
 
 local function drawMoney()
@@ -351,7 +402,7 @@ local function drawMoney()
 
 	local money = getPlayerMoney(localPlayer)
 
-	return dxDrawTextWithOutline(
+	return dxDrawTextWithOutlineMonospaced(
 		formatMoney(money),
 		HUD_MONEY_LEFT, HUD_MONEY_TOP,
 		HUD_MONEY_RIGHT, HUD_MONEY_BOTTOM,
